@@ -63,8 +63,77 @@ run_tests = function(df, n, proc, segment = 1, alpha) {
 
 ########################## SEQUENTIAL PROCEDURE FUNCTION ########################## 
 
-group_sequential = function(proc, target_power, d_forpower, d_actual) {
+#########  FUNCTION WITH ADJUSTED INFORMATION RATES FOR O'BRIEN-FLEMING #########
+group_sequential = function(proc, target_power, d_forpower, d_actual) { #adjusted information rates for O'Brien-Fleming
   bs = ifelse(proc == "asOF", "bsOF", "bsP")
+  if(proc == "asOF") {rates = c(0.50, 0.75, 1)} else{rates = c(1/3, 2/3, 1)}
+  
+  # Specify the design
+  design = getDesignGroupSequential(sided = 1,
+                                    alpha = alpha_total, 
+                                    beta = 1 - target_power,
+                                    kMax = max_n_segments, 
+                                    typeOfDesign = proc,
+                                    typeBetaSpending= bs,
+                                    informationRates = rates) 
+  
+  # Get parameters
+  parameters = getSampleSizeMeans(design = design, 
+                                  groups = 2, 
+                                  alternative = d_forpower)
+  n_gs = ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
+  alpha = parameters$criticalValuesPValueScale
+  futility = parameters$futilityBoundsPValueScale
+  
+  # RUN LOOK 1
+  set.seed(1234*(d_forpower*target_power))
+  raw1 = generate_data(nsims = nsims, n = n_gs[1], d = d_actual)
+  gs1 = run_tests(df = raw1, n = n_gs[1], proc = proc, alpha = alpha[1]) %>% 
+    mutate(decision = ifelse(p <= alpha, "Reject", 
+                             ifelse(p > futility[1], "SupportNull", "Continue")))
+  #Support null not to be taken literally; stopped for futility based on beta-spending
+  
+  keep1 = gs1 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
+  
+  # RUN LOOK 2
+  gs1keep = raw1 %>% 
+    filter(nsim %in% keep1) %>% 
+    mutate(nsim = rep(1:length(keep1), each = n_gs[1])) #keep raw data of unfinished trials after look 1
+  
+  set.seed(1512*(d_forpower*target_power))
+  raw2 = generate_data(nsims = sum(gs1$decision=="Continue"), n = n_gs[2], d = d_actual)
+  
+  gs2 = bind_rows(gs1keep, raw2) %>% 
+    run_tests(n = n_gs[2], proc = proc, alpha = alpha[2], segment = 2) %>% 
+    mutate(n = n_gs[1] + n_gs[2], decision = ifelse(p <= alpha, "Reject", 
+                                                 ifelse(p > futility[2], "SupportNull", "Continue")))
+  #Support null not to be taken literally; stopped for futility based on beta-spending
+  
+  keep2 = gs2 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
+  
+  # RUN LOOK 3
+  gs1keep = raw1 %>% filter(nsim %in% keep1[keep2]) %>%
+    mutate(nsim = rep(1:length(keep2), each = n_gs[1])) #raw data look 1, unfinished trials
+  gs2keep = raw2 %>% filter(nsim %in% keep2) %>% 
+    mutate(nsim = rep(1:length(keep2), each = n_gs[2])) #raw data look 2, unfinished trials
+  
+  set.seed(0304*(d_forpower*target_power))
+  raw3 = generate_data(nsims = sum(gs2$decision=="Continue"), n = n_gs[3], d = d_actual)
+  gs3 = bind_rows(gs1keep, gs2keep, raw3) %>% 
+    run_tests(n = n_gs[3], proc = proc, alpha = alpha[3], segment = 3) %>% 
+    mutate(n = sum(n_gs), decision = ifelse(p <= alpha, "Reject", "FTR"))
+  
+  # Create final data-frame
+  bind_rows(gs1, gs2, gs3) %>% 
+    filter(decision != "Continue") %>% 
+    mutate(id = row_number(), d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
+    select(id, proc, segment, n, d_forpower, d_actual,  power, decision, ES)
+}
+
+################# FUNCTION WITH EQUAL INFORMATION RATES #################
+
+group_sequential = function(proc, target_power, d_forpower, d_actual) {
+  bs = ifelse(proc == "asOF", "bsOF", "bsP") #equal information rates
   
   # Specify the design
   design = getDesignGroupSequential(sided = 1,
@@ -263,9 +332,9 @@ system.time(dt <- mclapply(1:length(d_actual),
                            function(i) procedure(d_forpower[i], d_actual[i]),
                            mc.cores = 2)) #takes ~56mins to run when nsim = 10,000 & ncores = 2
                                           #takes ~7.9 hours to run when nsim = 50,000 & ncores = 2
-df = dt %>% bind_rows()
-write.csv(df, "simulations/simulation001.csv", row.names = F)
 beep()
+df = dt %>% bind_rows()
+#write.csv(df, "simulations/simulation001.csv", row.names = F)
 
 #write in zip to compress: 
 write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F)
@@ -357,8 +426,8 @@ system.time(dt <- mclapply(1:length(d_actual),
                            function(i) procedure(d_forpower[i], d_actual[i]),
                            mc.cores = 2)) #takes ~23 mins to run when nsim = 10,000 & ncores = 2 & bayes excluded 
 beep()
-df_freq = dt %>% bind_rows()
-write.csv(df_freq, "simulations/simulation001-freq.csv", row.names = F)
+#df_freq = dt %>% bind_rows()
+#write.csv(df_freq, "simulations/simulation001-freq.csv", row.names = F)
 
 #=========================================================#
 ########################## BAYES ##########################
@@ -429,5 +498,5 @@ df_bayes = dt %>% bind_rows()
 write.csv(df_bayes, "simulation001-bayes.csv", row.names = F)
 
 
-df = bind_rows(df_freq, df_bayes)
-write.csv(df, "simulation001.csv", row.names = F)
+#df = bind_rows(df_freq, df_bayes)
+#write.csv(df, "simulation001.csv", row.names = F)

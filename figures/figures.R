@@ -15,20 +15,13 @@ library(metafor)
 #Insert code section with Ctrl+Shift+R
 
 # TO DO -------------------------------------------------------------------
-# Increase number of simulations to 50,000 after Yen/Sherlock
-# Add simulation with SPRT - to this end, also change the long-run error control versus short-run evidence section of the paper. After SPRT data is collected, can have 6 panels for all figures. Also add Pramanik's 2020 modified SPRT.
+# Add simulation with SPRT - to this end, also change the long-run error control versus short-run evidence section of the paper. After SPRT data is collected, can have 6 panels for all figures. Also add Pramanik's 2020 modified SPRT. 
 # Add simulation with equivalence test -- what should I set as the bounds? Notes meeting DL: "flip de toets. De type I fout van de equivalentie toets is gelijk aan de type II fout van de NHST. Sequential analyse jennison en turnboll 2000 group-sequential methods with applications to clinical trials. De simpelste combinatie van een equivalentie toets en de NHST"
-# Perhaps change settings for O'Brien-Fleming: look after 50%, 75%, 100%.
+# Change settings for O'Brien-Fleming: look after 50%, 75%, 100%.
 # Implement bias corrections for GS designs - adjusted ES from rpact
 # For the Bayes procedure, also add the normal effect size estimate (Cohen's d) - this would even speed up your code. 
 # Include meta-analytic effect size 
-# Add a practical considerations sections under the discussion
-  ## A great advantage to group-sequential designs (compared to the SPRT or the SBF) is that, unlike the SPRT and
-  ## the SBF, it is not open-ended: you know exactly how many participants you at most will need to sample.
-  ## How many interim looks can researchers actually take? Look at how SBF/SPRT are applied in practice. In SBF
-  ## designs, how often is data analyzed in practice? Look at papers that use it. 
-  ## "Whereas continuous monitoring is desirable, it is often impractical" (Jennison and Turnbull)
-  ## Ethical considerations: when an experiment is highly costly or may be unsafe, it is an ethical imperative to terminate a trial as soon as possible - in this case, "ethical considerations prescribe that accumulating data be evaluated frequently" (Jennison and Turnbull)
+
 # Add in discussion/limitation section: We do not discuss adaptive designs, which extend GS designs and allow for even more flexibility while controlling error rates. Or: Implement adaptive designs???
 # Perhaps change prior for the SBF: r scale value of 0.5 - problem is power is too low. 
 # Emphasize that there is no bias correction available for the ISP. Also emphasize that the ISP is the only procedure that is *not* median unbiased.

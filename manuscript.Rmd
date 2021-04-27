@@ -23,7 +23,7 @@ abstract: >
 keywords          : "sequential analysis, hypothesis testing, efficiency, effect size estimation, bias"
 wordcount         : "-"
   
-bibliography      : ["better.bib","r-refs.bib"]
+bibliography      : ["references.bib","r-refs.bib"]
 
 floatsintext      : no
 figurelist        : no
@@ -52,6 +52,7 @@ library(BayesFactor)
 library(parallel)
 library(metafor)
 library(beepr)
+library(citr)
 
 r_refs(file = "r-refs.bib") #update later
 default_plot_hook = knitr::knit_hooks$get('plot') 
@@ -407,6 +408,18 @@ Earlier, we introduced the reader to two trade-offs of potential importance to t
 # Conclusion
 
 We have learned that scientific experiments can require substantial time, money, and effort. At times, the well-being of research subjects, human or non-human, is at stake [@stefan2020]. In these contexts, sequential hypothesis testing can provide substantial efficiency gains. Group-Sequential designs, the Sequential Probability Ratio Test, and the Sequential Bayes Factor procedure are valuable tools for psychological scientists to add to their statistical toolbox.
+
+# Practical considerations section 
+
+"The SPRT has the theoretical optimal property that, among all tests with error probabilities not exceeding alpha and beta, it attains the smallest possible expected sample size ... when either H0 or H1 is true. However, the SPRT is an "open" procedure, i.e., the sample size is not bounded, and a consequence of this is that the distribution of sample size can be quite skewed with a large variance." And the ASN can be large when theta is not equal to theta0 or theta1 [@jennison2000: p.23]
+
+A great advantage to group-sequential designs (compared to the SPRT or the SBF) is that, unlike the SPRT and the SBF, it is not open-ended: you know exactly how many participants you at most will need to sample. How many interim looks can researchers actually take? Look at how SBF/SPRT are applied in practice. In SBF designs, how often is data analyzed in practice? Look at papers that use it. GS-designs are closed - there is a guaranteed upper limit on sample size.  "Whereas continuous monitoring is desirable, it is often impractical" [@jennison2000: p.21] Ethical considerations: when an experiment is highly costly or may be unsafe, it is an ethical imperative to terminate a trial as soon as possible - in this case, "ethical considerations prescribe that accumulating data be evaluated frequently" [@jennison2000: p.19]
+
+"Armitage (1954, 1958b, 1975) and Bross (1952, 1958) pioneered the use of sequential methods in the medical field, particularly for comparative clinical trials. Initially these plans were fully sequential and did not receive widespread acceptance, perhaps because continuous assessment of study results was often impractical."[@jennison2000: p.24]
+
+Re. O'Brien-Fleming: discuss the very conservative stopping boundary at early analysis, which also the decision rule to be similar to the fixed sample test if the last stage is reached -- "features which have turned out to be very appealing to practitioners"[@jennison2000: p.25]
+
+Methods were "extended to the often more realistic setting in which group sizes, or more generally increments in information, are unequal and unpredictable" [@jennison2000: p.26] (ISP can not be applied in realistic settings.)
 
 \newpage
 
