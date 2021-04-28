@@ -347,11 +347,13 @@ alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculat
 
 system.time(dt <- mclapply(1:length(d_actual), 
                            function(i) procedure(d_forpower[i], d_actual[i]),
-                           mc.cores = 2)) #takes ~56mins to run when nsim = 10,000 & ncores = 2
-                                          #takes ~7.9 hours to run when nsim = 50,000 & ncores = 2
-beep()
+                           mc.cores = 2)) #takes ~13 hours to run with nsim = 50,000 and ncores = 2
+system("say Your code has finished running!")
 df = dt %>% bind_rows()
 write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
+
+########################## READ IN DATA ##########################
+
 zz = gzfile("simulations/simulation001.csv.gz", 'rt')
 df = read.csv(zz, header = T) #read in data
 
