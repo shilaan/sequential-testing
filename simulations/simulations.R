@@ -37,8 +37,8 @@ generate_data = function(nsims, n, d) {
   # Generate raw data
   raw = lapply(1:nsims, function(i) {
     data.frame(nsim = i, n = n, d = d,
-               m1 = rnorm(n = n, mean = 0),
-               m2 = rnorm(n = n, mean = 0) + d)})
+               m2 = rnorm(n = n, mean = 0),
+               m1 = rnorm(n = n, mean = 0) + d)})
   bind_rows(raw)
 }
 
@@ -46,22 +46,149 @@ run_tests = function(df, n, proc, segment = 1, alpha) {
   # Run t-tests on raw data
   p = lapply(1:max(df$nsim), function(i) {
     df %>% filter(nsim == i) %>% #run 1 analysis per simulation
-      summarize(p = t.test(m2, m1, alternative = "greater", var.equal = T)$p.value)
+      summarize(p = t.test(m1, m2, alternative = "greater", var.equal = T)$p.value)
     })
   
   # Create final data-frame
   df %>% group_by(nsim) %>% 
     summarize(proc = proc, segment = segment, 
-              alpha = alpha, n = mean(n),
+              alpha = alpha, n = mean(n), 
               sd1 = sd(m1), sd2 = sd(m2),
               m1 = mean(m1), m2 = mean(m2)) %>% 
     mutate(sdpooled = sqrt((sd1^2 +sd2^2)/2)) %>% 
-    mutate(ES = (m2 - m1) / sdpooled) %>% #ES estimate = Cohen's d
+    mutate(ES = (m1 - m2) / sdpooled) %>% #ES estimate = Cohen's d
     cbind(tibble(p) %>% 
             unnest(cols = c(p))) #add p-value
 } 
 
 ########################## SEQUENTIAL PROCEDURE FUNCTION ########################## 
+
+#########  FUNCTION WITH BIAS ADJUSTMENT AND ADJUSTED INFORMATION RATES FOR O'BRIEN-FLEMING #########  
+
+group_sequential = function(proc, target_power, d_forpower, d_actual) { 
+
+bs = ifelse(proc == "asOF", "bsOF", "bsP") #Specify beta-spending function
+if(proc == "asOF") {rates = c(0.50, 0.75, 1)} else{rates = c(1/3, 2/3, 1)} #specify information rates for Pocock vs OBF
+
+# Specify the design
+design = getDesignGroupSequential(sided = 1,
+                                  alpha = alpha_total, 
+                                  beta = 1 - target_power,
+                                  kMax = max_n_segments, 
+                                  typeOfDesign = proc,
+                                  typeBetaSpending= bs,
+                                  informationRates = rates,
+                                  bindingFutility = TRUE) #binding futility bounds
+
+# Get parameters
+parameters = getSampleSizeMeans(design = design, 
+                                groups = 2, 
+                                alternative = d_forpower)
+n_gs = ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
+alpha = parameters$criticalValuesPValueScale
+futility = parameters$futilityBoundsPValueScale
+
+# RUN LOOK 1
+set.seed(1234*(d_forpower*target_power))
+raw1 = generate_data(nsims = nsims, n = n_gs[1], d = d_actual) %>% 
+  mutate(id = nsim, 
+         n_cumulative = n_gs[1],
+         look = 1) 
+
+gs1 = run_tests(df = raw1, n = n_gs[1], proc = proc, alpha = alpha[1]) %>% 
+  mutate(id = nsim, 
+         n_cumulative = n_gs[1],
+         decision = ifelse(p <= alpha, "Reject",
+                           ifelse(p > futility[1], "SupportNull", "Continue")))
+#Support null not to be taken literally; stopped for futility based on beta-spending
+
+keep1 = gs1 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
+
+# RUN LOOK 2
+gs1keep = raw1 %>% #keep raw data of unfinished trials after look 1
+  filter(nsim %in% keep1) %>% 
+  mutate(id = nsim, #create experiment-id variable 
+         nsim = rep(1:length(keep1), each = n_gs[1])) 
+
+set.seed(1512*(d_forpower*target_power))
+raw2 = generate_data(nsims = sum(gs1$decision=="Continue"), n = n_gs[2], d = d_actual) %>% 
+  mutate(id = rep(keep1, each = n_gs[2]), 
+         n_cumulative = n_gs[1] + n_gs[2],  #Do I need to adjust n here?
+         look = 2) 
+
+gs2 = bind_rows(gs1keep, raw2) %>% 
+  run_tests(n = n_gs[2], proc = proc, alpha = alpha[2], segment = 2) %>% 
+  mutate(id = keep1,
+         n = n_gs[2],
+         n_cumulative = n_gs[1] + n_gs[2],
+         decision = ifelse(p <= alpha, "Reject", ifelse(p > futility[2], "SupportNull", "Continue")))
+#Support null not to be taken literally; stopped for futility based on beta-spending
+
+keep2 = gs2 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
+
+# RUN LOOK 3
+gs1keep = raw1 %>% filter(nsim %in% keep1[keep2]) %>%
+  mutate(nsim = rep(1:length(keep2), each = n_gs[1])) #raw data look 1, unfinished trials
+gs2keep = raw2 %>% filter(nsim %in% keep2) %>% 
+  mutate(nsim = rep(1:length(keep2), each = n_gs[2])) #raw data look 2, unfinished trials
+
+set.seed(0304*(d_forpower*target_power))
+raw3 = generate_data(nsims = sum(gs2$decision=="Continue"), n = n_gs[3], d = d_actual) %>% 
+  mutate(id = rep(keep1[keep2], each = n_gs[3]), #mistake here 
+         n_cumulative = sum(n_gs),
+         look = 3)
+
+gs3 = bind_rows(gs1keep, gs2keep, raw3) %>% 
+  run_tests(n = n_gs[3], proc = proc, alpha = alpha[3], segment = 3) %>% 
+  mutate(id = keep1[keep2],
+         n = n_gs[3],
+         n_cumulative = sum(n_gs), 
+         decision = ifelse(p <= alpha, "Reject", "FTR"))
+
+# Bias-correction with rpact
+
+raw_merged = bind_rows(raw1, raw2, raw3) %>% 
+  group_by(id, look) %>% 
+  summarize(n = mean(n),
+            sd1 = sd(m1),
+            sd2 = sd(m2),
+            m1 = mean(m1),
+            m2 = mean(m2)) %>% 
+  mutate(sdpooled = sqrt((sd1^2 +sd2^2)/2),
+         ES = (m1 - m2)/ sdpooled) #ES = uncorrected Cohen's d
+
+# Get median unbiased estimate
+
+unbiased = raw_merged %>% 
+  split(.$id) %>% 
+  map(~ getDataset(
+    n1 = .$n,
+    n2 = .$n,
+    means1 = .$m1,
+    means2 = .$m2,
+    stDevs1 = .$sd1,
+    stDevs2 = .$sd2
+  )) %>% 
+    map(~ getFinalConfidenceInterval(
+    design = design,
+    dataInput = .x
+  )) %>%
+  map("medianUnbiased") %>% 
+  data_frame(ES_corrected = .) 
+
+##############################
+# Add to all dataframes: n, n_cumulative, ES_corrected
+
+# Create final data-frame
+
+df = bind_rows(gs1, gs2, gs3) %>% 
+  filter(decision != "Continue") %>% 
+  arrange(id) %>% 
+  bind_cols(unbiased) %>% 
+  mutate(d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
+  select(id, proc, segment, n, n_cumulative, d_forpower, d_actual,  power, decision, ES, ES_corrected)
+
+}
 
 #########  FUNCTION WITH ADJUSTED INFORMATION RATES FOR O'BRIEN-FLEMING #########
 group_sequential = function(proc, target_power, d_forpower, d_actual) { #adjusted information rates for O'Brien-Fleming
