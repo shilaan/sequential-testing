@@ -51,7 +51,6 @@ library(coda)
 library(BayesFactor)
 library(parallel)
 library(metafor)
-library(beepr)
 library(citr)
 
 r_refs(file = "r-refs.bib") #update later

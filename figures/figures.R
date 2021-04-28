@@ -19,7 +19,7 @@ library(metafor)
 # Add simulation with equivalence test -- what should I set as the bounds? Notes meeting DL: "flip de toets. De type I fout van de equivalentie toets is gelijk aan de type II fout van de NHST. Sequential analyse jennison en turnboll 2000 group-sequential methods with applications to clinical trials. De simpelste combinatie van een equivalentie toets en de NHST"
 # Rewrite in manuscript: Settings for O'Brien-Fleming: look after 50%, 75%, 100%.
 # Rerun simulations on Sherlock.
-# Implement bias corrections for GS designs - adjusted ES from rpact
+# Rewrite in manuscript: Implemented bias corrections for GS designs - median unbiased ES from rpact
 # For the Bayes procedure, also add the normal effect size estimate (Cohen's d) - this would even speed up your code. 
 # Include meta-analytic effect size 
 
