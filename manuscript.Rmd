@@ -52,6 +52,7 @@ library(BayesFactor)
 library(parallel)
 library(metafor)
 library(citr)
+library(MSPRT)
 
 r_refs(file = "r-refs.bib") #update later
 default_plot_hook = knitr::knit_hooks$get('plot') 
@@ -419,6 +420,12 @@ A great advantage to group-sequential designs (compared to the SPRT or the SBF) 
 Re. O'Brien-Fleming: discuss the very conservative stopping boundary at early analysis, which also the decision rule to be similar to the fixed sample test if the last stage is reached -- "features which have turned out to be very appealing to practitioners"[@jennison2000: p.25]
 
 Methods were "extended to the often more realistic setting in which group sizes, or more generally increments in information, are unequal and unpredictable" [@jennison2000: p.26] (ISP can not be applied in realistic settings.)
+
+"From a practical perspective, there are many hypothesis testing contexts where it is not feasible to implement a SPRT. For instance, a SPRT cannot be applied when data are not collected sequentially. Similarly, it cannot be applied when it is not possible to perform the evaluation as soon as participants are treated... To address these challenges, group sequential designs have been developed to allow for the evaluation of patient outcomes only after groups of patients have been observed or at scheduled interim analysis times" [@pramanik2021: p. 4-5]
+
+# To add
+
+In this paper, the example we use looks at the performance of these procedures under ideal conditions (an oracle prior setup), i.e. the performance of these procedures when the true effect size matches the model expectations as closely as possible: the population effect size is either equal to zero or it matches the effect size parameter (SPRT, Fixed, GS-designs) or the mode of the prior distribution on effect size (SBF) in the alternative model [@stefan2020: p. 15]. 
 
 \newpage
 

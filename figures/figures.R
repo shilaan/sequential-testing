@@ -20,11 +20,12 @@ library(metafor)
 # Rewrite in manuscript: Settings for O'Brien-Fleming: look after 50%, 75%, 100%.
 # Rerun simulations on Sherlock.
 # Rewrite in manuscript: Implemented bias corrections for GS designs - median unbiased ES from rpact
-# For the Bayes procedure, also add the normal effect size estimate (Cohen's d) - this would even speed up your code. 
+# For the Bayes procedure, also add the normal effect size estimate (Cohen's d). 
 # Include meta-analytic effect size 
+# Perhaps change prior for the SBF: r scale value of 0.5 - problem is power is too low. Perhaps use prior from Stefan et al. 2020 - informed normal distribution centered on the population effect size. 
+# Optimize Bayes thresholds using the R Package NMOF (differential evolution algorithm - see Stefan)
 
 # Add in discussion/limitation section: We do not discuss adaptive designs, which extend GS designs and allow for even more flexibility while controlling error rates. Or: Implement adaptive designs???
-# Perhaps change prior for the SBF: r scale value of 0.5 - problem is power is too low. 
 # Emphasize that there is no bias correction available for the ISP. Also emphasize that the ISP is the only procedure that is *not* median unbiased.
 # Change tables: show results for all effect sizes
 # Rephrase wording: instead of fail to reject, simply refer to Rejecting the Null and Rejecting the Alternative.

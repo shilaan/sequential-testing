@@ -6,6 +6,7 @@ library(BayesFactor)
 library(coda)
 library(tidyverse)
 library(parallel)
+library(MSPRT)
 
 ########################## READ ISP FILES ##########################
 source("simulations/engine.R") # Obtained from Ulrich & Miller 2020
@@ -46,7 +47,7 @@ run_tests = function(df, n, proc, segment = 1, alpha) {
   p = lapply(1:max(df$nsim), function(i) {
     df %>% filter(nsim == i) %>% #run 1 analysis per simulation
       summarize(p = t.test(m1, m2, alternative = "greater", var.equal = T)$p.value)
-    })
+  }) %>% map("p") %>% unlist()
   
   # Create final data-frame
   df %>% group_by(nsim) %>% 
@@ -55,9 +56,8 @@ run_tests = function(df, n, proc, segment = 1, alpha) {
               sd1 = sd(m1), sd2 = sd(m2),
               m1 = mean(m1), m2 = mean(m2)) %>% 
     mutate(sdpooled = sqrt((sd1^2 +sd2^2)/2)) %>% 
-    mutate(ES = (m1 - m2) / sdpooled) %>% #ES estimate = Cohen's d
-    cbind(tibble(p) %>% 
-            unnest(cols = c(p))) #add p-value
+    mutate(ES = (m1 - m2) / sdpooled, #ES estimate = Cohen's d #Change to Hedges g?
+           p = p) #add p-value
 } 
 
 ########################## SEQUENTIAL PROCEDURE FUNCTION ########################## 
@@ -158,7 +158,7 @@ raw_merged = bind_rows(raw1, raw2, raw3) %>%
          ES = (m1 - m2)/ sdpooled) #ES = uncorrected Cohen's d
 
 # Get median unbiased estimate
-unbiased = raw_merged %>% 
+ES_corrected = raw_merged %>% 
   split(.$id) %>% 
   map(~ getDataset(
     n1 = .$n,
@@ -168,12 +168,12 @@ unbiased = raw_merged %>%
     stDevs1 = .$sd1,
     stDevs2 = .$sd2
   )) %>% 
-    map(~ getFinalConfidenceInterval(
+  map(~ getFinalConfidenceInterval(
     design = design,
     dataInput = .x
   )) %>%
   map("medianUnbiased") %>% 
-  tibble() %>% unnest(cols = c(.)) %>% rename(ES_corrected = ".")
+  unlist()
 
 ##############################
 
@@ -181,9 +181,9 @@ unbiased = raw_merged %>%
 bind_rows(gs1, gs2, gs3) %>% 
   filter(decision != "Continue") %>% 
   arrange(id) %>% 
-  bind_cols(unbiased) %>% 
-  mutate(d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
+  mutate(d_forpower = d_forpower, d_actual = d_actual, power = target_power, ES_corrected = ES_corrected) %>% 
   select(id, proc, segment, n, n_cumulative, d_forpower, d_actual,  power, decision, ES, ES_corrected)
+
 }
 
 ######################### FULL PROCEDURE FUNCTION ########################## 
@@ -318,7 +318,7 @@ procedure = function(d_forpower, d_actual) {
 # Returns simulation001.csv.gz
 
 ########################## RUN TEST SIMULATION ##########################
-nsims = 1000
+nsims = 100
 max_n_segments = 3
 d_actual = 0.5
 d_forpower = 0.5
@@ -329,7 +329,7 @@ alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculat
 
 system.time(dt <- mclapply(1:length(d_actual), 
                            function(i) procedure(d_forpower[i], d_actual[i]),
-                           mc.cores = 2)) #takes x min to run when test nsim = 100. started at 
+                           mc.cores = 2)) 
 system("say Your code has finished running!")
 df = dt %>% bind_rows()
 
@@ -361,19 +361,99 @@ df = read.csv(zz, header = T) #read in data
 ############################################################################
 ############################################################################
 
+# MSPRT --------------------------------------------------------------------
 
+MSPRT = function(d_forpower, d_actual) {
+  
+  minN = 23
+  maxN = 23*3
+  
+  cumulativeNs = seq(minN, maxN, minN)
 
+  design_SPRT = design.MSPRT(test.type = "twoT",
+                             theta1 = d_forpower,
+                             Type1.target = alpha_total,
+                             Type2.target = 1 - target_power,
+                             N1.max = maxN,
+                             N2.max = maxN,
+                             batch1.size = rep(minN, maxN/minN),
+                             batch2.size = rep(minN, maxN/minN),
+                             verbose = F,
+                             nReplicate = 10) #no need for MCMC simulations, simply interested in the design object.
+  
+  # Run all data in batches of minN
+  set.seed(1234*(d_forpower*target_power))
+  l = lapply(1:length(cumulativeNs), function(i){generate_data(nsims = nsims, n = minN, d = d_actual)})
+  
+  df = bind_rows(l) %>% arrange(nsim) %>% 
+    mutate(segment = rep(rep(1:length(cumulativeNs), each = minN), nsims),
+           n_cumulative = n * segment)
+  
+  # Run LR tests
+  lr = df %>% 
+    split(.$nsim) %>%
+    map(~ implement.MSPRT(
+      obs1 = .$m1,
+      obs2 = .$m2,
+      design.MSPRT.object = design_SPRT,
+      plot.it = 0, 
+      verbose = F
+    ))
+  
+  #Keep all data until we've hit the boundary (if no boundary is hit, keep all data)
+  df %>% 
+    mutate(n_final = lr %>% 
+             map("n1") %>%
+             unlist() %>% 
+             rep(each = maxN)) %>% 
+    filter(n_cumulative <= n_final) %>% 
+    group_by(nsim) %>% 
+    summarize(sd1 = sd(m1),
+              sd2 = sd(m2),
+              m1 = mean(m1),
+              m2 = mean(m2),
+              segment = max(segment),
+              n = min(n_cumulative),
+              n_cumulative = max(n_cumulative)) %>% 
+    ungroup() %>% 
+    mutate(id = row_number(),
+           proc = "SPRT",
+           d_forpower = d_forpower, 
+           d_actual = d_actual, 
+           power = target_power,
+           decision = lr %>% 
+             map("decision") %>% #recode all my decisions above to have same wording
+             unlist(),
+           sdpooled = sqrt((sd1^2 +sd2^2)/2),
+           ES = (m1 - m2)/ sdpooled, #uncorrected effect size estimate
+           ES_corrected = ES) %>% 
+    select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)  
+  
+}
 
+# Set parameters
+nsims = 50000
+d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
+d_forpower = rep(0.5, 8)
+target_power = 0.8
+alpha_total = 0.05
 
+system.time(dt <- mclapply(1:length(d_actual), 
+                           function(i) MSPRT(d_forpower[i], d_actual[i]),
+                           mc.cores = 2)) #takes ~5 mins to run
+system("say Jake is a bah bay!")
+sprt = dt %>% bind_rows()
+write.csv(sprt, "simulations/temp-msprt.csv", row.names = FALSE)
 
+# Merge with other procedures
+zz = gzfile("simulations/simulation001.csv.gz", 'rt')
+df = read.csv(zz, header = T) #read in data
+df = bind_rows(df, sprt)
 
+# Write data
+write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
 
-
-
-
-
-
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ############################################################################
 ############################################################################
