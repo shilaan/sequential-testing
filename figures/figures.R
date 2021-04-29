@@ -15,7 +15,7 @@ library(metafor)
 #Insert code section with Ctrl+Shift+R
 
 # TO DO -------------------------------------------------------------------
-# Add simulation with SPRT - to this end, also change the long-run error control versus short-run evidence section of the paper. After SPRT data is collected, can have 6 panels for all figures. Also add Pramanik's 2020 modified SPRT. 
+# Make decision wording consistent across procedures. 
 # Add simulation with equivalence test -- what should I set as the bounds? Notes meeting DL: "flip de toets. De type I fout van de equivalentie toets is gelijk aan de type II fout van de NHST. Sequential analyse jennison en turnboll 2000 group-sequential methods with applications to clinical trials. De simpelste combinatie van een equivalentie toets en de NHST"
 # Rewrite in manuscript: Settings for O'Brien-Fleming: look after 50%, 75%, 100%.
 # Rerun simulations on Sherlock.

@@ -53,6 +53,7 @@ library(parallel)
 library(metafor)
 library(citr)
 library(MSPRT)
+library(TOSTER)
 
 r_refs(file = "r-refs.bib") #update later
 default_plot_hook = knitr::knit_hooks$get('plot') 
@@ -423,9 +424,13 @@ Methods were "extended to the often more realistic setting in which group sizes,
 
 "From a practical perspective, there are many hypothesis testing contexts where it is not feasible to implement a SPRT. For instance, a SPRT cannot be applied when data are not collected sequentially. Similarly, it cannot be applied when it is not possible to perform the evaluation as soon as participants are treated... To address these challenges, group sequential designs have been developed to allow for the evaluation of patient outcomes only after groups of patients have been observed or at scheduled interim analysis times" [@pramanik2021: p. 4-5]
 
+"Continuous data monitoring can be a serious practical burden, and the introduction of group sequential tests has led to much wider use of sequential methods. (...) Not only are group sequential tests convenient to conduct, they also provide ample opportunity for early stopping and can achieve most of the benefits of fully sequential tests in terms of lower expected sample sizes and shorter average study lengths." [@jennison2000: p. 38]
+
 # To add
 
-In this paper, the example we use looks at the performance of these procedures under ideal conditions (an oracle prior setup), i.e. the performance of these procedures when the true effect size matches the model expectations as closely as possible: the population effect size is either equal to zero or it matches the effect size parameter (SPRT, Fixed, GS-designs) or the mode of the prior distribution on effect size (SBF) in the alternative model [@stefan2020: p. 15]. 
+In this paper, the example we use throughout looks at the performance of these procedures under ideal conditions (an oracle prior setup), i.e. the performance of these procedures when the true effect size matches the model expectations as closely as possible: the population effect size is either equal to zero or it matches the effect size parameter (SPRT, Fixed, GS-designs) or the mode of the prior distribution on effect size (SBF) in the alternative model [@stefan2020: p. 15]. 
+
+Add writing on the modified SPRT. 
 
 \newpage
 

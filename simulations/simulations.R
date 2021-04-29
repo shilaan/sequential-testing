@@ -7,6 +7,7 @@ library(coda)
 library(tidyverse)
 library(parallel)
 library(MSPRT)
+library(TOSTER)
 
 ########################## READ ISP FILES ##########################
 source("simulations/engine.R") # Obtained from Ulrich & Miller 2020
@@ -97,9 +98,8 @@ raw1 = generate_data(nsims = nsims, n = n_gs[1], d = d_actual) %>%
 gs1 = run_tests(df = raw1, n = n_gs[1], proc = proc, alpha = alpha[1]) %>% 
   mutate(id = nsim, 
          n_cumulative = n_gs[1],
-         decision = ifelse(p <= alpha, "Reject",
-                           ifelse(p > futility[1], "SupportNull", "Continue")))
-#Support null not to be taken literally; stopped for futility based on beta-spending
+         decision = ifelse(p <= alpha, "reject.null",
+                           ifelse(p > futility[1], "reject.alt", "Continue"))) 
 
 keep1 = gs1 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
 
@@ -119,9 +119,9 @@ gs2 = bind_rows(gs1keep, raw2) %>%
   run_tests(n = n_gs[2], proc = proc, alpha = alpha[2], segment = 2) %>% 
   mutate(id = keep1,
          n = n_gs[2],
-         n_cumulative = n_gs[1] + n_gs[2],
-         decision = ifelse(p <= alpha, "Reject", ifelse(p > futility[2], "SupportNull", "Continue")))
-#Support null not to be taken literally; stopped for futility based on beta-spending
+         n_cumulative = n_gs[1] + n_gs[2], 
+         decision = ifelse(p <= alpha, "reject.null", 
+                           ifelse(p > futility[2], "reject.alt", "Continue")))
 
 keep2 = gs2 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
 
@@ -142,7 +142,7 @@ gs3 = bind_rows(gs1keep, gs2keep, raw3) %>%
   mutate(id = keep1[keep2],
          n = n_gs[3],
          n_cumulative = sum(n_gs), 
-         decision = ifelse(p <= alpha, "Reject", "FTR"))
+         decision = ifelse(p <= alpha, "reject.null", "inconclusive")) 
 
 ##############################
 
@@ -203,14 +203,44 @@ procedure = function(d_forpower, d_actual) {
   n_fixed = ceiling(power.t.test(delta = d_forpower, sig.level = alpha_total, power = target_power, 
                                  type = "two.sample", alternative = "one.sided")$n)
   
-  # RUN FIXED SAMPLE
+  # RUN FIXED SAMPLE NHST
   set.seed(1234*(d_forpower*target_power))
-  raw = generate_data(nsims = nsims, n = n_fixed, d = d_actual)
-  fixed = run_tests(df = raw, n = n_fixed, proc = "Fixed", alpha = alpha_total) %>% 
-    mutate(decision = ifelse(p <= alpha, "Reject", "FTR"), 
-           id = nsim, n_cumulative = n, ES_corrected = ES,
-           d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
-    select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)
+  fixed = generate_data(nsims = nsims, n = n_fixed, d = d_actual) %>% 
+    run_tests(n = n_fixed, proc = "Fixed", alpha = alpha_total) %>% 
+    mutate(id = nsim, n_cumulative = n, ES_corrected = ES,
+           d_forpower = d_forpower, d_actual = d_actual, power = target_power)
+  
+  # RUN EQUIVALENCE TEST
+  eq_bounds = powerTOSTtwo(alpha = alpha_total, #set bounds
+                           statistical_power = target_power,
+                           N = n_fixed)
+  
+  eq_tests = fixed %>% 
+    split(.$nsim) %>%
+    map(~ TOSTtwo(
+      m1 = .$m1,
+      m2 = .$m2,
+      sd1 = .$sd1,
+      sd2 = .$sd2,
+      n1 = .$n,
+      n2 = .$n,
+      low_eqbound_d = eq_bounds[1],
+      high_eqbound_d = eq_bounds[2],
+      alpha = alpha_total,
+      var.equal = T,
+      verbose = F,
+      plot = F)) %>% 
+    bind_rows() %>% 
+    rowwise() %>% 
+    mutate(outcome = max(TOST_p1, TOST_p2) <= alpha_total)
+  
+  # Create final data-frame
+  fixed = fixed %>% 
+    mutate(equivalence = eq_tests$outcome) %>% 
+    mutate(decision = ifelse(p <= alpha, "reject.null", 
+                             ifelse(equivalence == TRUE, "reject.alt",
+                                    "inconclusive"))) %>% 
+  select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)
   
   ########################## ISP ##########################
   
@@ -221,24 +251,22 @@ procedure = function(d_forpower, d_actual) {
   # RUN SEGMENT 1
   set.seed(1234*(d_forpower*target_power))
   raw = generate_data(nsims = nsims, n = n_s, d = d_actual)
-  isp1 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_strong) %>% 
-    mutate(decision = ifelse(p <= alpha_strong, "Reject",
-                             ifelse(p > alpha_weak, "SupportNull", "Continue")))
-  #Support null not to be taken literally 
+  isp1 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_strong) %>%  
+    mutate(decision = ifelse(p <= alpha_strong, "reject.null",
+                             ifelse(p > alpha_weak, "reject.alt", "Continue")))
   
   # RUN SEGMENT 2
   set.seed(1512*(d_forpower*target_power))
   raw = generate_data(nsims = sum(isp1$decision=="Continue"), n = n_s, d = d_actual)
   isp2 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_strong, segment = 2) %>% 
-    mutate(decision = ifelse(p <= alpha_strong, "Reject",
-                             ifelse(p > alpha_weak, "SupportNull", "Continue")))
-  #Support null not to be taken literally
+    mutate(decision = ifelse(p <= alpha_strong, "reject.null", 
+                             ifelse(p > alpha_weak, "reject.alt", "Continue")))
   
   # RUN SEGMENT 3
   set.seed(0304*(d_forpower*target_power))
   raw = generate_data(nsims = sum(isp2$decision=="Continue"), n = n_s, d = d_actual)
   isp3 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_weak, segment = 3) %>% 
-    mutate(decision = ifelse(p <= alpha_weak, "Reject", "FTR"))
+    mutate(decision = ifelse(p <= alpha_weak, "reject.null", "inconclusive")) 
   
   isp = bind_rows(isp1, isp2, isp3) %>% filter(decision != "Continue") %>% 
     mutate(id = row_number(), n = n_s, n_cumulative = n_s*segment, 
@@ -283,9 +311,9 @@ procedure = function(d_forpower, d_actual) {
     arrange(nsim) %>% mutate(hit = ifelse(abs(BF) >= maxBoundary, 1, 0),
                              segment = rep(1:length(cumulativeNs), nsims)) %>% 
     group_by(nsim) %>% mutate(hits = cumsum(hit)) %>% 
-    filter(cumsum(hits) < 2) %>% slice_tail() %>% ungroup() %>% 
-    mutate(decision = ifelse(BF >= maxBoundary, "Reject",
-                             ifelse(BF <= -maxBoundary, "SupportNull", "FTR")),
+    filter(cumsum(hits) < 2) %>% slice_tail() %>% ungroup() %>%
+    mutate(decision = ifelse(BF >= maxBoundary, "reject.null",
+                             ifelse(BF <= -maxBoundary, "reject.alt", "inconclusive")),
            n = minN,
            n_cumulative = segment * minN) %>% 
     select(-hits, -hit)
@@ -306,9 +334,75 @@ procedure = function(d_forpower, d_actual) {
     mutate(id = row_number(), proc = "Bayes", d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
     select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)
   
+  ########################### MSPRT ###########################
+  
+  minN = 23
+  maxN = 23*3
+  
+  cumulativeNs = seq(minN, maxN, minN)
+  
+  design_SPRT = design.MSPRT(test.type = "twoT",
+                             theta1 = d_forpower,
+                             Type1.target = alpha_total,
+                             Type2.target = 1 - target_power,
+                             N1.max = maxN,
+                             N2.max = maxN,
+                             batch1.size = rep(minN, maxN/minN),
+                             batch2.size = rep(minN, maxN/minN),
+                             verbose = F,
+                             nReplicate = 10) #no need for MCMC simulations, simply interested in the design object.
+  
+  # Run all data in batches of minN
+  set.seed(1234*(d_forpower*target_power))
+  l = lapply(1:length(cumulativeNs), function(i){generate_data(nsims = nsims, n = minN, d = d_actual)})
+  
+  df = bind_rows(l) %>% arrange(nsim) %>% 
+    mutate(segment = rep(rep(1:length(cumulativeNs), each = minN), nsims),
+           n_cumulative = n * segment)
+  
+  # Run LR tests
+  lr = df %>% 
+    split(.$nsim) %>%
+    map(~ implement.MSPRT(
+      obs1 = .$m1,
+      obs2 = .$m2,
+      design.MSPRT.object = design_SPRT,
+      plot.it = 0, 
+      verbose = F
+    ))
+  
+  #Keep all data until we've hit the boundary (if no boundary is hit, keep all data)
+  sprt = df %>% 
+    mutate(n_final = lr %>% 
+             map("n1") %>%
+             unlist() %>% 
+             rep(each = maxN)) %>% 
+    filter(n_cumulative <= n_final) %>% 
+    group_by(nsim) %>% 
+    summarize(sd1 = sd(m1),
+              sd2 = sd(m2),
+              m1 = mean(m1),
+              m2 = mean(m2),
+              segment = max(segment),
+              n = min(n_cumulative),
+              n_cumulative = max(n_cumulative)) %>% 
+    ungroup() %>% 
+    mutate(id = row_number(),
+           proc = "SPRT",
+           d_forpower = d_forpower, 
+           d_actual = d_actual, 
+           power = target_power,
+           decision = lr %>% 
+             map("decision") %>% 
+             unlist(),
+           sdpooled = sqrt((sd1^2 +sd2^2)/2),
+           ES = (m1 - m2)/ sdpooled, #uncorrected effect size estimate
+           ES_corrected = ES) %>% 
+    select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected) 
+  
   ########################## MERGE DATA ##########################
   
-  bind_rows(fixed, isp, pocock, obrien, bayes)
+  bind_rows(fixed, isp, pocock, obrien, bayes, sprt)
 }
 
 ########################## RUN SIMULATION 01 ##########################
@@ -351,15 +445,6 @@ system.time(dt <- mclapply(1:length(d_actual),
 system("say Your code has finished running!")
 df = dt %>% bind_rows()
 write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
-
-########################## READ IN DATA ##########################
-
-zz = gzfile("simulations/simulation001.csv.gz", 'rt')
-df = read.csv(zz, header = T) #read in data
-
-############################################################################
-############################################################################
-############################################################################
 
 # MSPRT --------------------------------------------------------------------
 
@@ -422,7 +507,7 @@ MSPRT = function(d_forpower, d_actual) {
            d_actual = d_actual, 
            power = target_power,
            decision = lr %>% 
-             map("decision") %>% #recode all my decisions above to have same wording
+             map("decision") %>% 
              unlist(),
            sdpooled = sqrt((sd1^2 +sd2^2)/2),
            ES = (m1 - m2)/ sdpooled, #uncorrected effect size estimate
@@ -443,7 +528,6 @@ system.time(dt <- mclapply(1:length(d_actual),
                            mc.cores = 2)) #takes ~5 mins to run
 system("say Jake is a bah bay!")
 sprt = dt %>% bind_rows()
-write.csv(sprt, "simulations/temp-msprt.csv", row.names = FALSE)
 
 # Merge with other procedures
 zz = gzfile("simulations/simulation001.csv.gz", 'rt')
@@ -454,6 +538,17 @@ df = bind_rows(df, sprt)
 write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+########################## READ IN DATA ##########################
+
+zz = gzfile("simulations/simulation001.csv.gz", 'rt')
+df = read.csv(zz, header = T) #read in data
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+############################################################################
+############################################################################
+############################################################################
 
 ############################################################################
 ############################################################################
