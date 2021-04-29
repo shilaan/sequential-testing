@@ -441,10 +441,28 @@ alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculat
 
 system.time(dt <- mclapply(1:length(d_actual), 
                            function(i) procedure(d_forpower[i], d_actual[i]),
-                           mc.cores = 2)) #takes ~13 hours to run with nsim = 50,000 and ncores = 2
+                           mc.cores = 2)) #takes ~14 hours to run with nsim = 50,000 and ncores = 2
 system("say Your code has finished running!")
 df = dt %>% bind_rows()
 write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+########################## READ IN DATA ##########################
+
+zz = gzfile("simulations/simulation001.csv.gz", 'rt')
+df = read.csv(zz, header = T) #read in data
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+############################################################################
+############################################################################
+############################################################################
+
+############################################################################
+############################################################################
+############################################################################
+# ARCHIVED FUNCTIONS ------------------------------------------------------
 
 # MSPRT --------------------------------------------------------------------
 
@@ -454,7 +472,7 @@ MSPRT = function(d_forpower, d_actual) {
   maxN = 23*3
   
   cumulativeNs = seq(minN, maxN, minN)
-
+  
   design_SPRT = design.MSPRT(test.type = "twoT",
                              theta1 = d_forpower,
                              Type1.target = alpha_total,
@@ -537,23 +555,6 @@ df = bind_rows(df, sprt)
 # Write data
 write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-########################## READ IN DATA ##########################
-
-zz = gzfile("simulations/simulation001.csv.gz", 'rt')
-df = read.csv(zz, header = T) #read in data
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-############################################################################
-############################################################################
-############################################################################
-
-############################################################################
-############################################################################
-############################################################################
-# ARCHIVED FUNCTIONS ------------------------------------------------------
 
 
 #########  FUNCTION WITH ADJUSTED INFORMATION RATES FOR O'BRIEN-FLEMING #########
