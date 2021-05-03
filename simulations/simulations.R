@@ -1,5 +1,6 @@
 ########################## SET UP ########################## 
 rm(list = ls())
+library(data.table)
 library(rpact)
 library(pracma)
 library(BayesFactor)
@@ -8,338 +9,536 @@ library(tidyverse)
 library(parallel)
 library(MSPRT)
 library(TOSTER)
+library(BFDA)
+library(microbenchmark)
+library(NCmisc)
+library(here)
 
-########################## READ ISP FILES ##########################
-source("simulations/engine.R") # Obtained from Ulrich & Miller 2020
-
-########################## FIND ALPHA-WEAK FUNCTION ##########################
-
-find_alpha_weak <- function(alpha_total, max_n_segments, alpha_strong) {
-  # Obtained from Ulrich & Miller 2020
-  # Use numerical search to find the appropriate alpha_weak value
-  # that will produce the desired overall_alpha level for the indicated
-  # values of n_segments and alpha_strong
-  compute_error <- function(try_aw) {
-    diff <- try_aw - alpha_strong
-    diff_accumulated <- diff^(max_n_segments - 1)
-    alpha_strong * (1-diff_accumulated)/(1-diff)+
-      try_aw * diff_accumulated-alpha_total 
-  }
-  aw_range <- c(alpha_strong, alpha_total^(1/max_n_segments))
-  final_aw <- fzero(compute_error, aw_range)
-  final_aw$x
-}
-
-#find_alpha_weak(0.05, 3, .025) #returns .28
-
-########################## SIMULATION FUNCTIONS ##########################
+########################## GLOBAL HELPER FUNCTIONS ##########################
 
 generate_data = function(nsims, n, d) { 
   # Generate raw data
   raw = lapply(1:nsims, function(i) {
-    data.frame(nsim = i, n = n, d = d,
+    data.table(nsim = i, n = n, d = d,
                m2 = rnorm(n = n, mean = 0),
                m1 = rnorm(n = n, mean = 0) + d)})
-  bind_rows(raw)
+  data.table::rbindlist(raw)
 }
 
 run_tests = function(df, n, proc, segment = 1, alpha) {
-  # Run t-tests on raw data
-  p = lapply(1:max(df$nsim), function(i) {
-    df %>% filter(nsim == i) %>% #run 1 analysis per simulation
-      summarize(p = t.test(m1, m2, alternative = "greater", var.equal = T)$p.value)
-  }) %>% map("p") %>% unlist()
   
-  # Create final data-frame
+  # Run t-tests and create data-frame
   df %>% group_by(nsim) %>% 
-    summarize(proc = proc, segment = segment, 
-              alpha = alpha, n = mean(n), 
-              sd1 = sd(m1), sd2 = sd(m2),
-              m1 = mean(m1), m2 = mean(m2)) %>% 
+    summarize(p = t.test(m1, m2, alternative = "greater", var.equal = T)$p.value,
+              proc = proc, 
+              segment = segment, 
+              alpha = alpha, 
+              n = mean(n), 
+              sd1 = sd(m1), 
+              sd2 = sd(m2),
+              m1 = mean(m1), 
+              m2 = mean(m2)) %>% 
     mutate(sdpooled = sqrt((sd1^2 +sd2^2)/2)) %>% 
-    mutate(ES = (m1 - m2) / sdpooled, #ES estimate = Cohen's d #Change to Hedges g?
-           p = p) #add p-value
+    mutate(ES = (m1 - m2) / sdpooled) #ES estimate = Cohen's d #Change to Hedges g?
+  
 } 
 
-########################## SEQUENTIAL PROCEDURE FUNCTION ########################## 
+# To do:------
+# Reconcile ES estimate from BFDA and other functions 
+# Note that BFDA calculates Cohen's d from the t-statistic, which leads to a slight overestimation of ES 
 
-#########  FUNCTION WITH BIAS ADJUSTMENT AND ADJUSTED INFORMATION RATES FOR O'BRIEN-FLEMING #########  
+#run_tests = function(df, n, proc, segment = 1, alpha) {
+#  
+#  # Run t-tests and create data-frame
+#  df %>% group_by(nsim) %>% 
+#    summarize(p = t.test(m1, m2, alternative = "greater", var.equal = T)$p.value,
+#              t = t.test(m1, m2, alternative = "greater", var.equal = T)$statistic,
+#              proc = proc, 
+#              segment = segment, 
+#              alpha = alpha, 
+#              n = mean(n), 
+#              sd1 = sd(m1), 
+#              sd2 = sd(m2),
+#              m1 = mean(m1), 
+#              m2 = mean(m2)) %>% 
+#    mutate(sdpooled = sqrt((sd1^2 +sd2^2)/2)) %>% 
+#    mutate(ES = (m1 - m2) / sdpooled,
+#           emp.ES = 2*t / sqrt(2*n-2)) #from BFDA
+#} 
+########################## GLOBAL PARAMETERS ##########################
+max_n_segments = 3
+alpha_total = 0.05
+target_power = 0.8
+d_forpower = 0.5
 
-group_sequential = function(proc, target_power, d_forpower, d_actual) { 
 
-bs = ifelse(proc == "asOF", "bsOF", "bsP") #Specify beta-spending function
-if(proc == "asOF") {rates = c(0.50, 0.75, 1)} else{rates = c(1/3, 2/3, 1)} #specify information rates for Pocock vs OBF
+########################## FULL PROCEDURE FUNCTION ##########################
 
-# Specify the design
-design = getDesignGroupSequential(sided = 1,
-                                  alpha = alpha_total, 
-                                  beta = 1 - target_power,
-                                  kMax = max_n_segments, 
-                                  typeOfDesign = proc,
-                                  typeBetaSpending= bs,
-                                  informationRates = rates,
-                                  bindingFutility = TRUE) #binding futility bounds
-
-# Get parameters
-parameters = getSampleSizeMeans(design = design, 
-                                groups = 2, 
-                                alternative = d_forpower)
-n_gs = ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
-alpha = parameters$criticalValuesPValueScale
-futility = parameters$futilityBoundsPValueScale
-
-# RUN LOOK 1
-set.seed(1234*(d_forpower*target_power))
-raw1 = generate_data(nsims = nsims, n = n_gs[1], d = d_actual) %>% 
-  mutate(id = nsim, 
-         n_cumulative = n_gs[1],
-         look = 1) 
-
-gs1 = run_tests(df = raw1, n = n_gs[1], proc = proc, alpha = alpha[1]) %>% 
-  mutate(id = nsim, 
-         n_cumulative = n_gs[1],
-         decision = ifelse(p <= alpha, "reject.null",
-                           ifelse(p > futility[1], "reject.alt", "Continue"))) 
-
-keep1 = gs1 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
-
-# RUN LOOK 2
-gs1keep = raw1 %>% #keep raw data of unfinished trials after look 1
-  filter(nsim %in% keep1) %>% 
-  mutate(id = nsim, #create experiment-id variable 
-         nsim = rep(1:length(keep1), each = n_gs[1])) 
-
-set.seed(1512*(d_forpower*target_power))
-raw2 = generate_data(nsims = sum(gs1$decision=="Continue"), n = n_gs[2], d = d_actual) %>% 
-  mutate(id = rep(keep1, each = n_gs[2]), 
-         n_cumulative = n_gs[1] + n_gs[2],  
-         look = 2) 
-
-gs2 = bind_rows(gs1keep, raw2) %>% 
-  run_tests(n = n_gs[2], proc = proc, alpha = alpha[2], segment = 2) %>% 
-  mutate(id = keep1,
-         n = n_gs[2],
-         n_cumulative = n_gs[1] + n_gs[2], 
-         decision = ifelse(p <= alpha, "reject.null", 
-                           ifelse(p > futility[2], "reject.alt", "Continue")))
-
-keep2 = gs2 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
-
-# RUN LOOK 3
-gs1keep = raw1 %>% filter(nsim %in% keep1[keep2]) %>%
-  mutate(nsim = rep(1:length(keep2), each = n_gs[1])) #raw data look 1, unfinished trials
-gs2keep = raw2 %>% filter(nsim %in% keep2) %>% 
-  mutate(nsim = rep(1:length(keep2), each = n_gs[2])) #raw data look 2, unfinished trials
-
-set.seed(0304*(d_forpower*target_power))
-raw3 = generate_data(nsims = sum(gs2$decision=="Continue"), n = n_gs[3], d = d_actual) %>% 
-  mutate(id = rep(keep1[keep2], each = n_gs[3]), 
-         n_cumulative = sum(n_gs),
-         look = 3)
-
-gs3 = bind_rows(gs1keep, gs2keep, raw3) %>% 
-  run_tests(n = n_gs[3], proc = proc, alpha = alpha[3], segment = 3) %>% 
-  mutate(id = keep1[keep2],
-         n = n_gs[3],
-         n_cumulative = sum(n_gs), 
-         decision = ifelse(p <= alpha, "reject.null", "inconclusive")) 
-
-##############################
-
-# Bias-correction with rpact
-raw_merged = bind_rows(raw1, raw2, raw3) %>% 
-  group_by(id, look) %>% 
-  summarize(n = mean(n),
-            sd1 = sd(m1),
-            sd2 = sd(m2),
-            m1 = mean(m1),
-            m2 = mean(m2)) %>% 
-  mutate(sdpooled = sqrt((sd1^2 +sd2^2)/2),
-         ES = (m1 - m2)/ sdpooled) #ES = uncorrected Cohen's d
-
-# Get median unbiased estimate
-ES_corrected = raw_merged %>% 
-  split(.$id) %>% 
-  map(~ getDataset(
-    n1 = .$n,
-    n2 = .$n,
-    means1 = .$m1,
-    means2 = .$m2,
-    stDevs1 = .$sd1,
-    stDevs2 = .$sd2
-  )) %>% 
-  map(~ getFinalConfidenceInterval(
-    design = design,
-    dataInput = .x
-  )) %>%
-  map("medianUnbiased") %>% 
-  unlist()
-
-##############################
-
-# Create final data-frame
-bind_rows(gs1, gs2, gs3) %>% 
-  filter(decision != "Continue") %>% 
-  arrange(id) %>% 
-  mutate(d_forpower = d_forpower, d_actual = d_actual, power = target_power, ES_corrected = ES_corrected) %>% 
-  select(id, proc, segment, n, n_cumulative, d_forpower, d_actual,  power, decision, ES, ES_corrected)
-
-}
-
-######################### FULL PROCEDURE FUNCTION ########################## 
-# For all procedures, I use naive Cohen's d as the uncorrected effect size estimate
-# For all procedures except for the ISP, I also implement an effect size correction (none available for the ISP)
-# For the group-sequential procedures, I use a median unbiased effect size estimate (correction from rpact)
-# For the Sequential Bayes Factor, the corrected effect size estimate is based on MCMC samples from the posterior (shrinks the estimate)
-# For the Bayesian hypothesis test, I obtain a Bayes Factor using the one-sided Bayesian two-sample t-test
-# For the Bayesian effect size estimate, I obtain a posterior distribution using the two-sided Bayesian two-sample t-test
-# (As recommended in Van Doorn et al. 2020)
-
-procedure = function(d_forpower, d_actual) {
+run_all_procedures = function(nsims){
   
-  ########################## FIXED SAMPLE ##########################
+  ########################## FIXED SAMPLING PROCEDURE FUNCTION ########################## 
   
-  # Calculate fixed n per group for the one-tailed two-sample t-test
-  n_fixed = ceiling(power.t.test(delta = d_forpower, sig.level = alpha_total, power = target_power, 
-                                 type = "two.sample", alternative = "one.sided")$n)
+  run_fixed = function(d_actual) {
+    
+    ########################## FIXED SAMPLE ##########################
+    
+    # Calculate fixed n per group for the one-tailed two-sample t-test
+    n_fixed = ceiling(power.t.test(delta = d_forpower, sig.level = alpha_total, power = target_power, 
+                                   type = "two.sample", alternative = "one.sided")$n)
+    
+    # RUN FIXED SAMPLE NHST
+    set.seed(1234*(d_forpower*target_power))
+    fixed = generate_data(nsims = nsims,
+                          n = n_fixed, 
+                          d = d_actual) %>% 
+      run_tests(n = n_fixed, 
+                proc = "Fixed", 
+                alpha = alpha_total) %>% 
+      mutate(id = nsim, 
+             n_cumulative = n, 
+             ES_corrected = ES,
+             d_forpower = d_forpower, 
+             d_actual = d_actual, 
+             power = target_power)
+    
+    # RUN EQUIVALENCE TEST
+    eq_bounds = powerTOSTtwo(
+      alpha = alpha_total, #set bounds
+      statistical_power = target_power,
+      N = n_fixed)
+    
+    eq_tests = fixed %>% 
+      split(.$nsim) %>%
+      map(~ TOSTtwo(
+        m1 = .$m1,
+        m2 = .$m2,
+        sd1 = .$sd1,
+        sd2 = .$sd2,
+        n1 = .$n,
+        n2 = .$n,
+        low_eqbound_d = eq_bounds[1],
+        high_eqbound_d = eq_bounds[2],
+        alpha = alpha_total,
+        var.equal = T,
+        verbose = F,
+        plot = F)) %>% 
+      data.table::rbindlist() %>% 
+      rowwise() %>% 
+      mutate(outcome = max(TOST_p1, TOST_p2) <= alpha_total)
+    
+    # Create final data-frame
+    fixed = fixed %>% 
+      mutate(equivalence = eq_tests$outcome) %>% 
+      mutate(decision = ifelse(p <= alpha, "reject.null", 
+                               ifelse(equivalence == TRUE, "reject.alt",
+                                      "inconclusive"))) 
+    
+    data.table(fixed)[, .(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)]
+    
+  }
   
-  # RUN FIXED SAMPLE NHST
-  set.seed(1234*(d_forpower*target_power))
-  fixed = generate_data(nsims = nsims, n = n_fixed, d = d_actual) %>% 
-    run_tests(n = n_fixed, proc = "Fixed", alpha = alpha_total) %>% 
-    mutate(id = nsim, n_cumulative = n, ES_corrected = ES,
-           d_forpower = d_forpower, d_actual = d_actual, power = target_power)
+  ########################## RUN FIXED SAMPLING PROCEDURE ##########################
   
-  # RUN EQUIVALENCE TEST
-  eq_bounds = powerTOSTtwo(alpha = alpha_total, #set bounds
-                           statistical_power = target_power,
-                           N = n_fixed)
+  ########################## SET PARAMETERS ##########################
+  d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
   
-  eq_tests = fixed %>% 
-    split(.$nsim) %>%
-    map(~ TOSTtwo(
-      m1 = .$m1,
-      m2 = .$m2,
-      sd1 = .$sd1,
-      sd2 = .$sd2,
-      n1 = .$n,
-      n2 = .$n,
-      low_eqbound_d = eq_bounds[1],
-      high_eqbound_d = eq_bounds[2],
-      alpha = alpha_total,
-      var.equal = T,
-      verbose = F,
-      plot = F)) %>% 
-    bind_rows() %>% 
-    rowwise() %>% 
-    mutate(outcome = max(TOST_p1, TOST_p2) <= alpha_total)
+  ########################## PARALELLELIZE ##########################
   
-  # Create final data-frame
-  fixed = fixed %>% 
-    mutate(equivalence = eq_tests$outcome) %>% 
-    mutate(decision = ifelse(p <= alpha, "reject.null", 
-                             ifelse(equivalence == TRUE, "reject.alt",
-                                    "inconclusive"))) %>% 
-  select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)
+  system.time(dt <- mclapply(1:length(d_actual), 
+                             function(i) run_fixed(d_actual[i]),
+                             mc.cores = 2)) 
+  print("The fixed sampling procedure has finished running!")
   
-  ########################## ISP ##########################
+  fixed = data.table::rbindlist(dt)
   
-  # Calculate n per group per segment for the ISP
-  n_s = ceiling(n_for_power(target_power, stat_procedure_name = "2t", effect_size = d_forpower, 
-                            max_n_segments, alpha_total, alpha_strong))/2
+  ########################## SEQUENTIAL PROCEDURE FUNCTION ########################## 
   
-  # RUN SEGMENT 1
-  set.seed(1234*(d_forpower*target_power))
-  raw = generate_data(nsims = nsims, n = n_s, d = d_actual)
-  isp1 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_strong) %>%  
-    mutate(decision = ifelse(p <= alpha_strong, "reject.null",
-                             ifelse(p > alpha_weak, "reject.alt", "Continue")))
+  #########  FUNCTION WITH BIAS ADJUSTMENT AND ADJUSTED INFORMATION RATES FOR O'BRIEN-FLEMING #########  
+
+  run_group_sequential = function(proc, d_actual) {
+    
+    if(proc == "asOF") {design = design_obf} else{design = design_pocock}
+    if(proc == "asOF") {parameters = parameters_obf} else{parameters = parameters_pocock}
+    
+    ns = ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
+    alpha = parameters$criticalValuesPValueScale
+    futility = parameters$futilityBoundsPValueScale
+    
+    # Run all data in batches
+    set.seed(1234*(d_forpower*target_power))
+    l = lapply(1:length(ns), function(i){generate_data(nsims = nsims, n = ns[i], d = d_actual)})
+    
+    df = data.table::rbindlist(l)[order(nsim)] %>% 
+      mutate(segment = rep(lapply(1:length(ns), function(i) {rep(i, times = ns[i])}) %>%  unlist(), nsims))
+    
+    # Run tests
+    tests = lapply(1:length(ns), function(i){
+      df %>% 
+        group_by(nsim) %>% 
+        filter(segment %in% 1:i) %>% #get data of all segments up to i 
+        summarize(p = t.test(m1, m2, alternative = "greater", var.equal = T)$p.value,
+                  sd1 = sd(m1),
+                  sd2 = sd(m2),
+                  m1 = mean(m1),
+                  m2 = mean(m2),
+                  segment = max(segment),
+                  n = case_when(
+                    segment == 1 ~ ns[1],
+                    segment == 2 ~ ns[2],
+                    segment == 3 ~ ns[3]
+                  ),
+                  n_cumulative = case_when(
+                    segment == 1 ~ ns[1],
+                    segment == 2 ~ ns[1] + ns[2],
+                    segment == 3 ~ sum(ns)
+                  ),
+                  alpha = case_when(
+                    segment == 1 ~ alpha[1],
+                    segment == 2 ~ alpha[2],
+                    segment == 3 ~ alpha[3]
+                  ),
+                  futility = case_when(
+                    segment == 1 ~ futility[1],
+                    segment == 2 ~ futility[2],
+                    segment == 3 ~ 1
+                  ),
+                  decision = case_when(
+                    p <= alpha ~ "reject.null",
+                    p > futility ~ "reject.alt",
+                    p > alpha & p < futility ~ "inconclusive"
+                  ) 
+        )
+    }) %>% 
+      data.table::rbindlist() %>%
+      group_by(nsim) %>% 
+      mutate(hit = cumsum(ifelse(decision != "inconclusive", 1, 0))) %>% 
+      filter(hit < 2) %>% 
+      slice_tail() %>% #only keep data until decision is made (or, if inconclusive, keep all data)
+      arrange(nsim)
+    
+    #Get bias corrected ES estimate - first split data into individual segments
+    raw_data = lapply(1:length(ns), function(i){
+      df %>% 
+        group_by(nsim) %>% 
+        filter(segment == i) %>% #get data by individual segments
+        summarize(sd1 = sd(m1),
+                  sd2 = sd(m2),
+                  m1 = mean(m1),
+                  m2 = mean(m2),
+                  segment = i,
+                  n = case_when(
+                    segment == 1 ~ ns[1],
+                    segment == 2 ~ ns[2],
+                    segment == 3 ~ ns[3]
+                  ))
+    }) %>% 
+      data.table::rbindlist() %>% 
+      arrange(nsim) %>% 
+      mutate(final_segment = tests %>% 
+               pull(segment) %>% 
+               rep(each = 3)) %>% 
+      filter(segment <= final_segment)
+    
+    # Get median unbiased estimate
+    ES_corrected = raw_data %>% 
+      split(.$nsim) %>% 
+      map(~ getDataset(
+        n1 = .$n,
+        n2 = .$n,
+        means1 = .$m1,
+        means2 = .$m2,
+        stDevs1 = .$sd1,
+        stDevs2 = .$sd2
+      )) %>% 
+      map(~ getFinalConfidenceInterval(
+        design = design,
+        dataInput = .x
+      )) %>%
+      map("medianUnbiased") %>% 
+      unlist()
+    
+    # Create final data-frame
+    tests = tests %>% 
+      ungroup() %>% 
+      mutate(id = nsim, 
+             proc = proc,
+             d_forpower = d_forpower, 
+             d_actual = d_actual, 
+             power = target_power, 
+             sdpooled = sqrt((sd1^2 +sd2^2)/2),
+             ES = (m1 - m2) / sdpooled,
+             ES_corrected = ES_corrected)
+    
+    data.table(tests)[, .(id, proc, segment, n, n_cumulative, d_forpower, d_actual,  power, decision, ES, ES_corrected)]
+  }
   
-  # RUN SEGMENT 2
-  set.seed(1512*(d_forpower*target_power))
-  raw = generate_data(nsims = sum(isp1$decision=="Continue"), n = n_s, d = d_actual)
-  isp2 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_strong, segment = 2) %>% 
-    mutate(decision = ifelse(p <= alpha_strong, "reject.null", 
-                             ifelse(p > alpha_weak, "reject.alt", "Continue")))
+  ########################## RUN GROUP SEQUENTIAL ##########################
   
-  # RUN SEGMENT 3
-  set.seed(0304*(d_forpower*target_power))
-  raw = generate_data(nsims = sum(isp2$decision=="Continue"), n = n_s, d = d_actual)
-  isp3 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_weak, segment = 3) %>% 
-    mutate(decision = ifelse(p <= alpha_weak, "reject.null", "inconclusive")) 
+  ########################## SET PARAMETERS ##########################
   
-  isp = bind_rows(isp1, isp2, isp3) %>% filter(decision != "Continue") %>% 
-    mutate(id = row_number(), n = n_s, n_cumulative = n_s*segment, 
-           d_forpower = d_forpower, d_actual = d_actual, power = target_power,
-           ES_corrected = ES) %>% 
-    select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)
+  get_design = function(proc) {
+    bs = ifelse(proc == "asOF", "bsOF", "bsP") #Specify beta-spending function
+    if(proc == "asOF") {rates = c(0.50, 0.75, 1)} else{rates = c(1/3, 2/3, 1)} #specify information rates for Pocock vs OBF
+    
+    # Specify the design
+    getDesignGroupSequential(
+      sided = 1,
+      alpha = alpha_total, 
+      beta = 1 - target_power,
+      kMax = max_n_segments, 
+      typeOfDesign = proc,
+      typeBetaSpending= bs,
+      informationRates = rates,
+      bindingFutility = TRUE) #binding futility bounds
+  }
   
-  ########################## GROUP SEQUENTIAL ##########################
+  get_parameters = function(design) {
+    # Get parameters
+    parameters = getSampleSizeMeans(
+      design = design, 
+      groups = 2, 
+      alternative = d_forpower)
+  }
   
-  pocock = group_sequential(proc = "asP", target_power = target_power, d_forpower = d_forpower, d_actual = d_actual)
-  obrien = group_sequential(proc = "asOF", target_power = target_power, d_forpower = d_forpower, d_actual = d_actual)
+  # Get pocock design and parameters
+  design_pocock = get_design(proc = "asP")
+  parameters_pocock = get_parameters(design = design_pocock)
   
-  ########################## BAYES ##########################
+  # Get O'Brien-Fleming design and parameters
+  design_obf = get_design(proc = "asOF")
+  parameters_obf = get_parameters(design = design_obf)
   
-  # Set parameters
-  minN = 22 # minimum n before optional stopping is started
-  maxN = 22*3 # maximum n - if that is reached without hitting a boundary, the run is aborted
-  cumulativeNs = seq(minN, maxN, minN)
-  maxBoundary = log(3) # maximal boundary for stopping, in log-units
+  d_actual = rep(c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2)), 2)
+  proc = rep(c("asP", "asOF"), each = 8) 
   
-  # Run all data in batches of minN
-  set.seed(1234*(d_forpower*target_power))
-  l = lapply(1:length(cumulativeNs), function(i){generate_data(nsims = nsims, n = minN, d = d_actual)})
+  ########################## PARALELLELIZE ##########################
+  system.time(dt <- mclapply(1:length(d_actual), 
+                             function(i) run_group_sequential(proc[i], d_actual[i]),
+                             mc.cores = 2)) 
+  print("The group-sequential procedures have finished running!")
   
-  df = bind_rows(l) %>% arrange(nsim) %>% 
-    mutate(segment = rep(rep(1:length(cumulativeNs), each = minN), nsims))
+  group_sequential = data.table::rbindlist(dt)
   
-  # Run Bayesian t-test (get log BF for H2: delta > 0; log BF for delta = 0: -logBF)
-  b = lapply(1:length(cumulativeNs), function(i){df %>% 
-      group_by(nsim) %>% filter(segment %in% 1:i) %>% 
-      summarize(BF = ttestBF(m1, m2, nullInterval = c(0, Inf))@bayesFactor$bf[1], #one-sided
-                sd1 = sd(m1),
-                sd2 = sd(m2),
-                m1 = mean(m1),
-                m2 = mean(m2)) %>% 
-      mutate(sdpooled = sqrt((sd1^2 +sd2^2)/2),
-             ES = (m1 - m2)/ sdpooled) #uncorrected effect size estimate
+  ########################## INDEPENDENT SEGMENTS PROCEDURE FUNCTION ########################## 
+
+  ########################## READ ISP FUNCTIONS ##########################
+  source("simulations/isp-engine.R") # Obtained from Ulrich & Miller 2020
+
+  # Find alpha weak
+  find_alpha_weak <- function(alpha_total, max_n_segments, alpha_strong) {
+    # Obtained from Ulrich & Miller 2020
+    # Use numerical search to find the appropriate alpha_weak value
+    # that will produce the desired overall_alpha level for the indicated
+    # values of n_segments and alpha_strong
+    compute_error <- function(try_aw) {
+      diff <- try_aw - alpha_strong
+      diff_accumulated <- diff^(max_n_segments - 1)
+      alpha_strong * (1-diff_accumulated)/(1-diff)+
+        try_aw * diff_accumulated-alpha_total 
+    }
+    aw_range <- c(alpha_strong, alpha_total^(1/max_n_segments))
+    final_aw <- fzero(compute_error, aw_range)
+    final_aw$x
+  }
+  
+  #find_alpha_weak(0.05, 3, .025) #returns .28
+  
+  run_isp = function(d_actual) {
+    
+    ########################## ISP ##########################
+    
+    # Calculate n per group per segment for the ISP
+    ns = ceiling(n_for_power(target_power, stat_procedure_name = "2t", effect_size = d_forpower, 
+                             max_n_segments, alpha_total, alpha_strong))/2
+    
+    # Run all data in batches of minN
+    set.seed(1234*(d_forpower*target_power))
+    l = lapply(1:max_n_segments, function(i){generate_data(nsims = nsims, n = ns, d = d_actual)})
+    
+    df = data.table::rbindlist(l)[order(nsim)] %>% 
+      mutate(segment = rep(rep(1:max_n_segments, each = ns), nsims))
+    
+    #Run hypothesis test
+    tests = lapply(1:max_n_segments, function(i){
+      df %>% 
+        group_by(nsim) %>% 
+        filter(segment == i) %>% #get data by individual segments
+        summarize(p = t.test(m1, m2, alternative = "greater", var.equal = T)$p.value,
+                  sd1 = sd(m1),
+                  sd2 = sd(m2),
+                  m1 = mean(m1),
+                  m2 = mean(m2),
+                  segment = i,
+                  decision = case_when(
+                    segment < 3 & p <= alpha_strong ~ "reject.null",
+                    segment < 3 & p > alpha_weak ~ "reject.alt",
+                    segment == 3 & p <= alpha_weak ~ "reject.null",
+                    is.integer(segment) ~ "inconclusive" #code all other cases as inconclusive
+                  )
+        )
+    }) %>% 
+      data.table::rbindlist() %>% 
+      arrange(nsim) %>% 
+      group_by(nsim) %>% 
+      mutate(final_segment = ifelse(decision != "inconclusive" | segment == 3, 1, 0)) %>% 
+      filter(final_segment == 1) %>% 
+      slice_head() %>% 
+      mutate(id = nsim,
+             proc = "ISP",
+             n = ns,
+             n_cumulative = n * segment,
+             d_forpower = d_forpower, 
+             d_actual = d_actual, 
+             power = target_power,
+             sdpooled = sqrt((sd1^2 +sd2^2)/2),
+             ES = (m1 - m2) / sdpooled, #ES estimate = Cohen's d #Change to Hedges g?
+             ES_corrected = ES) %>% 
+      ungroup() 
+    
+    # Get final data frame
+    data.table(tests)[, .(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)]
+    
+  }
+  
+  ########################## RUN INDEPENDENT SEGMENTS ##########################
+  
+  ########################## SET PARAMETERS ##########################
+  d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
+  alpha_strong = 0.025
+  alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculate alpha_weak for ISP
+  
+  ########################## PARALELLELIZE ##########################
+  system.time(dt <- mclapply(1:length(d_actual), 
+                             function(i) run_isp(d_actual[i]),
+                             mc.cores = 2)) 
+  print("The Independent Segments Procedure has finished running!")
+  
+  isp = data.table::rbindlist(dt)
+  
+  ############################################################################
+  ######################### SEQUENTIAL BAYES FACTOR ########################## 
+  ############################################################################
+  
+  run_sbf = function() { 
+    
+    df = lapply(1:length(d_actual), function(i){
+      BFDA.sim(
+        expected.ES = d_actual[i], 
+        type="t.between",
+        prior = list("normal", list(prior.mean = 0.5, prior.variance = 0.3)),
+        n.min = 25, 
+        n.max = 75, 
+        alternative = "greater", 
+        boundary = 3, 
+        B = nsims,
+        verbose = TRUE, 
+        cores = 4, 
+        stepsize = 25, 
+        design = "sequential") %>% 
+        BFDA.analyze(boundary = 3) 
     }) 
+    
+    df = df %>% 
+      map("endpoint") %>% 
+      data.table::rbindlist() %>% 
+      group_by(true.ES) %>%  
+      mutate(id = row_number(),
+             proc = "Bayes",
+             n_cumulative = n,
+             n = 25,
+             decision = case_when(
+               logBF >= log(3) ~ "reject.null",
+               logBF <= log(1/3) ~ "reject.alt",
+               is.numeric(logBF) ~ "inconclusive"
+             ),
+             segment = n_cumulative/n,
+             d_forpower = d_forpower,
+             power = target_power,
+             ES_corrected = emp.ES) #emp.ES = 2*t1$statistic / sqrt(2*nrow(df)-2)
+    
+    data.table(df)[, .(id, proc, segment, n, n_cumulative, d_forpower, d_actual = true.ES, power, decision, ES = emp.ES, ES_corrected)]
+    
+  }
   
-  # Keep all data until we've hit the boundary (if no boundary is hit, keep all data)
-  logBF = bind_rows(b) %>%
-    arrange(nsim) %>% mutate(hit = ifelse(abs(BF) >= maxBoundary, 1, 0),
-                             segment = rep(1:length(cumulativeNs), nsims)) %>% 
-    group_by(nsim) %>% mutate(hits = cumsum(hit)) %>% 
-    filter(cumsum(hits) < 2) %>% slice_tail() %>% ungroup() %>%
-    mutate(decision = ifelse(BF >= maxBoundary, "reject.null",
-                             ifelse(BF <= -maxBoundary, "reject.alt", "inconclusive")),
-           n = minN,
-           n_cumulative = segment * minN) %>% 
-    select(-hits, -hit)
+  ########################## RUN SEQUENTIAL BAYES ##########################
   
-  # Get Corrected Effect Size Estimate
-  df = df %>% mutate(keep = rep(logBF$segment, each = length(cumulativeNs)*minN)) %>% 
-    group_by(nsim) %>% filter(segment <= keep)
+  ########################## SET PARAMETERS  ##########################
+  d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
   
-  set.seed(1512*(d_forpower*target_power))
-  models = df %>% split(.$nsim) %>%
-    map(~ ttestBF(.$m1, .$m2)) %>% #two-sided
-    map(posterior, iterations = 1000, progress = FALSE) %>% 
-    map(~ mean(.x[,"delta"])) %>% 
-    tibble() %>% unnest(cols = c(.)) %>% rename(ES_corrected = ".")
+  system.time(dt <- mclapply(1:length(d_forpower), 
+                             function(i) run_sbf(),
+                             mc.cores = 2)) 
+  print("The Sequential Bayes Factor has finished running!")
   
-  # Combine results
-  bayes = logBF %>% bind_cols(models) %>% 
-    mutate(id = row_number(), proc = "Bayes", d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
-    select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)
+  bayes = data.table::rbindlist(dt)
+  
+  # MSPRT with adjusted information rates -----------------------------------
   
   ########################### MSPRT ###########################
   
-  minN = 23
-  maxN = 23*3
+  MSPRT = function(d_actual) {
+    
+    # Run all data in batches of minN
+    set.seed(1234*(d_forpower*target_power))
+    l = lapply(1:length(ns), function(i){generate_data(nsims = nsims, n = ns[i], d = d_actual)})
+    
+    df = data.table::rbindlist(l)[order(nsim)] %>% 
+      mutate(segment = rep(lapply(1:length(ns), function(i) {rep(i, times = ns[i])}) %>%  unlist(), nsims),
+             n_cumulative = case_when(
+               segment == 1 ~ ns[1],
+               segment == 2 ~ ns[1] + ns[2],
+               segment == 3 ~ sum(ns)
+             ))
+    
+    # Run LR tests
+    lr = df %>% 
+      split(.$nsim) %>%
+      map(~ implement.MSPRT(
+        obs1 = .$m1,
+        obs2 = .$m2,
+        design.MSPRT.object = design_SPRT,
+        plot.it = 0, 
+        verbose = F
+      ))
+    
+    #Keep all data until we've hit the boundary (if no boundary is hit, keep all data)
+    df %>% 
+      mutate(n_final = lr %>% 
+               map("n1") %>%
+               unlist() %>% 
+               rep(each = maxN)) %>% 
+      filter(n_cumulative <= n_final) %>% 
+      group_by(nsim) %>% 
+      summarize(sd1 = sd(m1),
+                sd2 = sd(m2),
+                m1 = mean(m1),
+                m2 = mean(m2),
+                segment = max(segment),
+                n = case_when(
+                  segment == 1 ~ ns[1],
+                  segment == 2 ~ ns[2],
+                  segment == 3 ~ ns[3]),
+                n_cumulative = max(n_cumulative)) %>% 
+      ungroup() %>% 
+      mutate(id = row_number(),
+             proc = "SPRT",
+             d_forpower = d_forpower, 
+             d_actual = d_actual, 
+             power = target_power,
+             decision = lr %>% 
+               map("decision") %>% 
+               unlist(),
+             sdpooled = sqrt((sd1^2 +sd2^2)/2),
+             ES = (m1 - m2)/ sdpooled, #uncorrected effect size estimate
+             ES_corrected = ES) %>% 
+      select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected) 
+    
+  }
   
-  cumulativeNs = seq(minN, maxN, minN)
+  ########################## SET PARAMETERS ##########################
+  d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
+  ns = c(28, 14, 14) #matched with OBF sample sizes
+  maxN = sum(ns)
   
   design_SPRT = design.MSPRT(test.type = "twoT",
                              theta1 = d_forpower,
@@ -347,504 +546,79 @@ procedure = function(d_forpower, d_actual) {
                              Type2.target = 1 - target_power,
                              N1.max = maxN,
                              N2.max = maxN,
-                             batch1.size = rep(minN, maxN/minN),
-                             batch2.size = rep(minN, maxN/minN),
-                             verbose = F,
-                             nReplicate = 10) #no need for MCMC simulations, simply interested in the design object.
+                             batch1.size = ns,
+                             batch2.size = ns,
+                             verbose = F) 
   
-  # Run all data in batches of minN
-  set.seed(1234*(d_forpower*target_power))
-  l = lapply(1:length(cumulativeNs), function(i){generate_data(nsims = nsims, n = minN, d = d_actual)})
+  ########################## PARALELLELIZE ##########################
+  system.time(dt <- mclapply(1:length(d_actual), 
+                             function(i) MSPRT(d_actual[i]),
+                             mc.cores = 2)) 
   
-  df = bind_rows(l) %>% arrange(nsim) %>% 
-    mutate(segment = rep(rep(1:length(cumulativeNs), each = minN), nsims),
-           n_cumulative = n * segment)
+  print("The Modified Sequential Probability Ratio Test has finished running!")
   
-  # Run LR tests
-  lr = df %>% 
-    split(.$nsim) %>%
-    map(~ implement.MSPRT(
-      obs1 = .$m1,
-      obs2 = .$m2,
-      design.MSPRT.object = design_SPRT,
-      plot.it = 0, 
-      verbose = F
-    ))
+  sprt = data.table::rbindlist(dt)
   
-  #Keep all data until we've hit the boundary (if no boundary is hit, keep all data)
-  sprt = df %>% 
-    mutate(n_final = lr %>% 
-             map("n1") %>%
-             unlist() %>% 
-             rep(each = maxN)) %>% 
-    filter(n_cumulative <= n_final) %>% 
-    group_by(nsim) %>% 
-    summarize(sd1 = sd(m1),
-              sd2 = sd(m2),
-              m1 = mean(m1),
-              m2 = mean(m2),
-              segment = max(segment),
-              n = min(n_cumulative),
-              n_cumulative = max(n_cumulative)) %>% 
-    ungroup() %>% 
-    mutate(id = row_number(),
-           proc = "SPRT",
-           d_forpower = d_forpower, 
-           d_actual = d_actual, 
-           power = target_power,
-           decision = lr %>% 
-             map("decision") %>% 
-             unlist(),
-           sdpooled = sqrt((sd1^2 +sd2^2)/2),
-           ES = (m1 - m2)/ sdpooled, #uncorrected effect size estimate
-           ES_corrected = ES) %>% 
-    select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected) 
   
-  ########################## MERGE DATA ##########################
+  ########################## CREATE FINAL DATA-FRAME ##########################
+  df = bind_rows(fixed, group_sequential, isp, bayes, sprt)
   
-  bind_rows(fixed, isp, pocock, obrien, bayes, sprt)
+  return(df)
+  
 }
 
-########################## RUN SIMULATION 01 ##########################
-# One-tailed, two-sample t-tests
-# 5 procedures: Fixed, ISP, GS Pocock, GS O'Brien Fleming, & Sequential Bayes Factor
-# Includes expected effect sizes (d = 0.5) and unexpected effect sizes
-# Returns simulation001.csv.gz
+########################## RUN ALL PROCEDURES ##########################
 
-########################## RUN TEST SIMULATION ##########################
-nsims = 100
-max_n_segments = 3
-d_actual = 0.5
-d_forpower = 0.5
-target_power = 0.8
-alpha_total = 0.05
-alpha_strong = 0.025
-alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculate alpha_weak for ISP
+system.time(dt <- mclapply(1, function(i) run_all_procedures(nsims = 20000),
+                           mc.cores = 2)) #20000 sims takes ~2.5-3 hours to run 
+system("say All your procedures have finished running!")
+df = data.table::rbindlist(dt)
 
-system.time(dt <- mclapply(1:length(d_actual), 
-                           function(i) procedure(d_forpower[i], d_actual[i]),
-                           mc.cores = 2)) 
-system("say Your code has finished running!")
-df = dt %>% bind_rows()
+########################## CREATE FINAL DATA-FRAME ##########################
 
-########################## SET PARAMETERS ##########################
-nsims = 50000
-max_n_segments = 3
-d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
-d_forpower = rep(0.5, 8)
-target_power = 0.8
-alpha_total = 0.05
-alpha_strong = 0.025
-alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculate alpha_weak for ISP
+write.csv(df, "simulations/simulation001.csv", row.names = F)
 
-########################## PARALELLELIZE ##########################
+#write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
 
-system.time(dt <- mclapply(1:length(d_actual), 
-                           function(i) procedure(d_forpower[i], d_actual[i]),
-                           mc.cores = 2)) #takes ~14 hours to run with nsim = 50,000 and ncores = 2
-system("say Your code has finished running!")
-df = dt %>% bind_rows()
-write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+########################## REMOVE REDUNDANCIES ##########################
+#Remove redundant functions from the isp-engine
+{
+  file_parsed = parse("simulations/isp-engine.R")
+  
+  is_function = function (expr) {
+    if (! is_assign(expr))
+      return(FALSE)
+    value = expr[[3]]
+    is.call(value) && as.character(value[[1]]) == 'function'
+  }
+  
+  function_name = function (expr)
+    as.character(expr[[2]])
+  
+  is_assign = function (expr) 
+    is.call(expr) && as.character(expr[[1]]) %in% c('=', '<-', 'assign')
+  
+  functions = Filter(is_function, file_parsed)
+  function_names = unlist(Map(function_name, functions))
+  
+  rm(list = function_names)
+  rm(list = c("file_parsed", "function_names", "functions", "function_name", "is_assign", "is_function"))
+  
+}
 
 ########################## READ IN DATA ##########################
+df = read.csv("simulations/simulation001.csv")
 
-zz = gzfile("simulations/simulation001.csv.gz", 'rt')
-df = read.csv(zz, header = T) #read in data
+#zipped.df = gzfile("simulations/simulation001.csv.gz", 'rt')
+#df = read.csv(zipped.df, header = T) #read in data
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 ############################################################################
 ############################################################################
 ############################################################################
-
 ############################################################################
 ############################################################################
 ############################################################################
-# ARCHIVED FUNCTIONS ------------------------------------------------------
-
-# MSPRT --------------------------------------------------------------------
-
-MSPRT = function(d_forpower, d_actual) {
-  
-  minN = 23
-  maxN = 23*3
-  
-  cumulativeNs = seq(minN, maxN, minN)
-  
-  design_SPRT = design.MSPRT(test.type = "twoT",
-                             theta1 = d_forpower,
-                             Type1.target = alpha_total,
-                             Type2.target = 1 - target_power,
-                             N1.max = maxN,
-                             N2.max = maxN,
-                             batch1.size = rep(minN, maxN/minN),
-                             batch2.size = rep(minN, maxN/minN),
-                             verbose = F,
-                             nReplicate = 10) #no need for MCMC simulations, simply interested in the design object.
-  
-  # Run all data in batches of minN
-  set.seed(1234*(d_forpower*target_power))
-  l = lapply(1:length(cumulativeNs), function(i){generate_data(nsims = nsims, n = minN, d = d_actual)})
-  
-  df = bind_rows(l) %>% arrange(nsim) %>% 
-    mutate(segment = rep(rep(1:length(cumulativeNs), each = minN), nsims),
-           n_cumulative = n * segment)
-  
-  # Run LR tests
-  lr = df %>% 
-    split(.$nsim) %>%
-    map(~ implement.MSPRT(
-      obs1 = .$m1,
-      obs2 = .$m2,
-      design.MSPRT.object = design_SPRT,
-      plot.it = 0, 
-      verbose = F
-    ))
-  
-  #Keep all data until we've hit the boundary (if no boundary is hit, keep all data)
-  df %>% 
-    mutate(n_final = lr %>% 
-             map("n1") %>%
-             unlist() %>% 
-             rep(each = maxN)) %>% 
-    filter(n_cumulative <= n_final) %>% 
-    group_by(nsim) %>% 
-    summarize(sd1 = sd(m1),
-              sd2 = sd(m2),
-              m1 = mean(m1),
-              m2 = mean(m2),
-              segment = max(segment),
-              n = min(n_cumulative),
-              n_cumulative = max(n_cumulative)) %>% 
-    ungroup() %>% 
-    mutate(id = row_number(),
-           proc = "SPRT",
-           d_forpower = d_forpower, 
-           d_actual = d_actual, 
-           power = target_power,
-           decision = lr %>% 
-             map("decision") %>% 
-             unlist(),
-           sdpooled = sqrt((sd1^2 +sd2^2)/2),
-           ES = (m1 - m2)/ sdpooled, #uncorrected effect size estimate
-           ES_corrected = ES) %>% 
-    select(id, proc, segment, n, n_cumulative, d_forpower, d_actual, power, decision, ES, ES_corrected)  
-  
-}
-
-# Set parameters
-nsims = 50000
-d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
-d_forpower = rep(0.5, 8)
-target_power = 0.8
-alpha_total = 0.05
-
-system.time(dt <- mclapply(1:length(d_actual), 
-                           function(i) MSPRT(d_forpower[i], d_actual[i]),
-                           mc.cores = 2)) #takes ~5 mins to run
-system("say Jake is a bah bay!")
-sprt = dt %>% bind_rows()
-
-# Merge with other procedures
-zz = gzfile("simulations/simulation001.csv.gz", 'rt')
-df = read.csv(zz, header = T) #read in data
-df = bind_rows(df, sprt)
-
-# Write data
-write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
-
-
-
-#########  FUNCTION WITH ADJUSTED INFORMATION RATES FOR O'BRIEN-FLEMING #########
-group_sequential = function(proc, target_power, d_forpower, d_actual) { #adjusted information rates for O'Brien-Fleming
-  bs = ifelse(proc == "asOF", "bsOF", "bsP")
-  if(proc == "asOF") {rates = c(0.50, 0.75, 1)} else{rates = c(1/3, 2/3, 1)}
-  
-  # Specify the design
-  design = getDesignGroupSequential(sided = 1,
-                                    alpha = alpha_total, 
-                                    beta = 1 - target_power,
-                                    kMax = max_n_segments, 
-                                    typeOfDesign = proc,
-                                    typeBetaSpending= bs,
-                                    informationRates = rates) 
-  
-  # Get parameters
-  parameters = getSampleSizeMeans(design = design, 
-                                  groups = 2, 
-                                  alternative = d_forpower)
-  n_gs = ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
-  alpha = parameters$criticalValuesPValueScale
-  futility = parameters$futilityBoundsPValueScale
-  
-  # RUN LOOK 1
-  set.seed(1234*(d_forpower*target_power))
-  raw1 = generate_data(nsims = nsims, n = n_gs[1], d = d_actual)
-  gs1 = run_tests(df = raw1, n = n_gs[1], proc = proc, alpha = alpha[1]) %>% 
-    mutate(decision = ifelse(p <= alpha, "Reject", 
-                             ifelse(p > futility[1], "SupportNull", "Continue")))
-  #Support null not to be taken literally; stopped for futility based on beta-spending
-  
-  keep1 = gs1 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
-  
-  # RUN LOOK 2
-  gs1keep = raw1 %>% 
-    filter(nsim %in% keep1) %>% 
-    mutate(nsim = rep(1:length(keep1), each = n_gs[1])) #keep raw data of unfinished trials after look 1
-  
-  set.seed(1512*(d_forpower*target_power))
-  raw2 = generate_data(nsims = sum(gs1$decision=="Continue"), n = n_gs[2], d = d_actual)
-  
-  gs2 = bind_rows(gs1keep, raw2) %>% 
-    run_tests(n = n_gs[2], proc = proc, alpha = alpha[2], segment = 2) %>% 
-    mutate(n = n_gs[1] + n_gs[2], decision = ifelse(p <= alpha, "Reject", 
-                                                    ifelse(p > futility[2], "SupportNull", "Continue")))
-  #Support null not to be taken literally; stopped for futility based on beta-spending
-  
-  keep2 = gs2 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
-  
-  # RUN LOOK 3
-  gs1keep = raw1 %>% filter(nsim %in% keep1[keep2]) %>%
-    mutate(nsim = rep(1:length(keep2), each = n_gs[1])) #raw data look 1, unfinished trials
-  gs2keep = raw2 %>% filter(nsim %in% keep2) %>% 
-    mutate(nsim = rep(1:length(keep2), each = n_gs[2])) #raw data look 2, unfinished trials
-  
-  set.seed(0304*(d_forpower*target_power))
-  raw3 = generate_data(nsims = sum(gs2$decision=="Continue"), n = n_gs[3], d = d_actual)
-  gs3 = bind_rows(gs1keep, gs2keep, raw3) %>% 
-    run_tests(n = n_gs[3], proc = proc, alpha = alpha[3], segment = 3) %>% 
-    mutate(n = sum(n_gs), decision = ifelse(p <= alpha, "Reject", "FTR"))
-  
-  # Create final data-frame
-  bind_rows(gs1, gs2, gs3) %>% 
-    filter(decision != "Continue") %>% 
-    mutate(id = row_number(), d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
-    select(id, proc, segment, n, d_forpower, d_actual,  power, decision, ES)
-}
-
-################# FUNCTION WITH EQUAL INFORMATION RATES #################
-
-group_sequential = function(proc, target_power, d_forpower, d_actual) {
-  bs = ifelse(proc == "asOF", "bsOF", "bsP") #equal information rates
-  
-  # Specify the design
-  design = getDesignGroupSequential(sided = 1,
-                                    alpha = alpha_total, 
-                                    beta = 1 - target_power,
-                                    kMax = max_n_segments, 
-                                    typeOfDesign = proc,
-                                    typeBetaSpending= bs) 
-  
-  # Get parameters
-  parameters = getSampleSizeMeans(design = design, 
-                                  groups = 2, 
-                                  alternative = d_forpower)
-  n_gs = ceiling(parameters$maxNumberOfSubjects / max_n_segments/2) # n per look per group
-  alpha = parameters$criticalValuesPValueScale
-  futility = parameters$futilityBoundsPValueScale
-  
-  # RUN LOOK 1
-  set.seed(1234*(d_forpower*target_power))
-  raw1 = generate_data(nsims = nsims, n = n_gs, d = d_actual)
-  gs1 = run_tests(df = raw1, n = n_gs, proc = proc, alpha = alpha[1]) %>% 
-    mutate(decision = ifelse(p <= alpha, "Reject", 
-                             ifelse(p > futility[1], "SupportNull", "Continue")))
-  #Support null not to be taken literally; stopped for futility based on beta-spending
-  
-  keep1 = gs1 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
-  
-  # RUN LOOK 2
-  gs1keep = raw1 %>% 
-    filter(nsim %in% keep1) %>% 
-    mutate(nsim = rep(1:length(keep1), each = n_gs)) #keep raw data of unfinished trials after look 1
-  
-  set.seed(1512*(d_forpower*target_power))
-  raw2 = generate_data(nsims = sum(gs1$decision=="Continue"), n = n_gs, d = d_actual)
-  
-  gs2 = bind_rows(gs1keep, raw2) %>% 
-    run_tests(n = n_gs, proc = proc, alpha = alpha[2], segment = 2) %>% 
-    mutate(n = n_gs * segment, decision = ifelse(p <= alpha, "Reject", 
-                                                 ifelse(p > futility[2], "SupportNull", "Continue")))
-  #Support null not to be taken literally; stopped for futility based on beta-spending
-  
-  keep2 = gs2 %>% filter(decision == "Continue") %>% select(nsim) %>% pull()
-  
-  # RUN LOOK 3
-  gs1keep = raw1 %>% filter(nsim %in% keep1[keep2]) %>%
-    mutate(nsim = rep(1:length(keep2), each = n_gs)) #raw data look 1, unfinished trials
-  gs2keep = raw2 %>% filter(nsim %in% keep2) %>% 
-    mutate(nsim = rep(1:length(keep2), each = n_gs)) #raw data look 2, unfinished trials
-  
-  set.seed(0304*(d_forpower*target_power))
-  raw3 = generate_data(nsims = sum(gs2$decision=="Continue"), n = n_gs, d = d_actual)
-  gs3 = bind_rows(gs1keep, gs2keep, raw3) %>% 
-    run_tests(n = n_gs, proc = proc, alpha = alpha[3], segment = 3) %>% 
-    mutate(n = n_gs*segment, decision = ifelse(p <= alpha, "Reject", "FTR"))
-  
-  # Create final data-frame
-  bind_rows(gs1, gs2, gs3) %>% 
-    filter(decision != "Continue") %>% 
-    mutate(id = row_number(), d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
-    select(id, proc, segment, n, d_forpower, d_actual,  power, decision, ES)
-}
-
-########################## PROCEDURES SPLIT IN BAYES & FREQUENTIST  ########################## 
-
-procedure = function(d_forpower, d_actual) {
-  
-  ########################## FIXED SAMPLE ##########################
-  
-  # Calculate fixed n per group for the one-tailed two-sample t-test
-  n_fixed = ceiling(power.t.test(delta = d_forpower, sig.level = alpha_total, power = target_power, 
-                                 type = "two.sample", alternative = "one.sided")$n)
-  
-  # RUN FIXED SAMPLE
-  set.seed(1234*(d_forpower*target_power))
-  raw = generate_data(nsims = nsims, n = n_fixed, d = d_actual)
-  fixed = run_tests(df = raw, n = n_fixed, proc = "Fixed", alpha = alpha_total) %>% 
-    mutate(decision = ifelse(p <= alpha, "Reject", "FTR"), id = nsim, 
-           d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
-    select(id, proc, segment, n, d_forpower, d_actual, power, decision, ES)
-  
-  ########################## ISP ##########################
-  
-  # Calculate n per group per segment for the ISP
-  n_s = ceiling(n_for_power(target_power, stat_procedure_name = "2t", effect_size = d_forpower, 
-                            max_n_segments, alpha_total, alpha_strong))/2
-  
-  # RUN SEGMENT 1
-  set.seed(1234*(d_forpower*target_power))
-  raw = generate_data(nsims = nsims, n = n_s, d = d_actual)
-  isp1 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_strong) %>% 
-    mutate(decision = ifelse(p <= alpha_strong, "Reject",
-                             ifelse(p > alpha_weak, "SupportNull", "Continue")))
-  #Support null not to be taken literally 
-  
-  # RUN SEGMENT 2
-  set.seed(1512*(d_forpower*target_power))
-  raw = generate_data(nsims = sum(isp1$decision=="Continue"), n = n_s, d = d_actual)
-  isp2 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_strong, segment = 2) %>% 
-    mutate(decision = ifelse(p <= alpha_strong, "Reject",
-                             ifelse(p > alpha_weak, "SupportNull", "Continue")))
-  #Support null not to be taken literally
-  
-  # RUN SEGMENT 3
-  set.seed(0304*(d_forpower*target_power))
-  raw = generate_data(nsims = sum(isp2$decision=="Continue"), n = n_s, d = d_actual)
-  isp3 = run_tests(df = raw, n = n_s, proc = "ISP", alpha = alpha_weak, segment = 3) %>% 
-    mutate(decision = ifelse(p <= alpha_weak, "Reject", "FTR"))
-  
-  isp = bind_rows(isp1, isp2, isp3) %>% filter(decision != "Continue") %>% 
-    mutate(id = row_number(), n = n_s*segment, d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
-    select(id, proc, segment, n, d_forpower, d_actual, power, decision, ES)
-  
-  ########################## GROUP SEQUENTIAL ##########################
-  
-  pocock = group_sequential(proc = "asP", target_power = target_power, d_forpower = d_forpower, d_actual = d_actual)
-  obrien = group_sequential(proc = "asOF", target_power = target_power, d_forpower = d_forpower, d_actual = d_actual)
-  
-  ########################## MERGE DATA ##########################
-  
-  bind_rows(fixed, isp, pocock, obrien)
-}
-
-########################## RUN SIMULATION 01 ##########################
-# One-tailed, two-sample t-tests
-# 4 procedures: Fixed, ISP, GS Pocock, GS O'Brien Fleming
-# Includes expected effect sizes (d = 0.5) and unexpected effect sizes
-# Returns simulation001-freq.csv
-
-########################## SET PARAMETERS ##########################
-nsims = 10000
-max_n_segments = 3
-#d_actual = 0.2
-#d_forpower = 0.5
-
-d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
-d_forpower = rep(0.5, 8)
-target_power = 0.8
-alpha_total = 0.05
-alpha_strong = 0.025
-alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculate alpha_weak for ISP
-
-########################## PARALELLELIZE ##########################
-
-system.time(dt <- mclapply(1:length(d_actual), 
-                           function(i) procedure(d_forpower[i], d_actual[i]),
-                           mc.cores = 2)) #takes ~23 mins to run when nsim = 10,000 & ncores = 2 & bayes excluded 
-beep()
-#df_freq = dt %>% bind_rows()
-#write.csv(df_freq, "simulations/simulation001-freq.csv", row.names = F)
-
-#=========================================================#
-########################## BAYES ##########################
-#=========================================================#
-
-bayes = function(d_forpower, d_actual) {
-  
-  ########################## BAYES ##########################
-  
-  # Set parameters
-  minN = 23 # minimum n before optional stopping is started
-  maxN = 23*3 # maximum n - if that is reached without hitting a boundary, the run is aborted
-  cumulativeNs = seq(minN, maxN, minN)
-  maxBoundary = log(3) # maximal boundary for stopping, in log-units
-  
-  # Run all data in batches of minN
-  set.seed(1234*(d_forpower*target_power))
-  l = lapply(1:length(cumulativeNs), function(i){generate_data(nsims = nsims, n = minN, d = d_actual)})
-  df = tibble(l) %>% unnest(cols = c(l)) %>% arrange(nsim) %>% 
-    mutate(segment = rep(rep(1:length(cumulativeNs), each = minN), nsims))
-  
-  # Run Bayesian t-test (get log BF for H2: delta > 0; log BF for delta = 0: -logBF)
-  b = lapply(1:length(cumulativeNs), function(i){df %>% 
-      group_by(nsim) %>% filter(segment %in% 1:i) %>% 
-      summarize(BF = ttestBF(m2, m1, nullInterval = c(0, Inf))@bayesFactor$bf[1])}) #one-sided
-  
-  # Keep all data until we've hit the boundary (if no boundary is hit, keep all data)
-  logBF = tibble(b) %>% unnest(cols = c(b)) %>% 
-    arrange(nsim) %>% mutate(hit = ifelse(abs(BF) >= maxBoundary, 1, 0),
-                             segment = rep(1:length(cumulativeNs), nsims)) %>% 
-    group_by(nsim) %>% mutate(hits = cumsum(hit)) %>% 
-    filter(cumsum(hits) < 2) %>% slice_tail() %>% ungroup() %>% 
-    mutate(decision = ifelse(BF >= maxBoundary, "Reject",
-                             ifelse(BF <= -maxBoundary, "SupportNull", "FTR")),
-           n = segment * minN) %>% 
-    select(-hits, -hit)
-  
-  # Get Bayesian Effect Size Estimate
-  df = df %>% mutate(keep = rep(logBF$segment, each = length(cumulativeNs)*minN)) %>% 
-    group_by(nsim) %>% filter(segment <= keep)
-  
-  set.seed(1512*(d_forpower*target_power))
-  models = df %>% split(.$nsim) %>%
-    map(~ ttestBF(.$m2, .$m1)) %>% #two-sided
-    map(posterior, iterations = 1000, progress = FALSE) %>% 
-    map(~ mean(.x[,"delta"])) %>% 
-    tibble() %>% unnest(cols = c(.)) %>% rename(ES = ".")
-  
-  # Combine results
-  logBF %>% cbind(models) %>% 
-    mutate(id = row_number(), proc = "Bayes", d_forpower = d_forpower, d_actual = d_actual, power = target_power) %>% 
-    select(id, proc, segment, n, d_forpower, d_actual, power, decision, ES)
-  
-}
-
-########################## SET PARAMETERS ##########################
-nsims = 10000
-d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
-d_forpower = rep(0.5, 8)
-target_power = 0.8
-########################## PARALELLELIZE ##########################
-system.time(dt <- mclapply(1:length(d_actual), 
-                           function(i) bayes(d_forpower[i], d_actual[i]),
-                           mc.cores = 2)) #takes ~31mins to run when nsim = 10,000 & ncores = 2
-beep()
-
-df_bayes = dt %>% bind_rows()
-write.csv(df_bayes, "simulation001-bayes.csv", row.names = F)
-
-#df = bind_rows(df_freq, df_bayes)
-#write.csv(df, "simulation001.csv", row.names = F)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

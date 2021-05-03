@@ -54,6 +54,7 @@ library(metafor)
 library(citr)
 library(MSPRT)
 library(TOSTER)
+library(BFDA)
 
 r_refs(file = "r-refs.bib") #update later
 default_plot_hook = knitr::knit_hooks$get('plot') 
@@ -431,6 +432,14 @@ Methods were "extended to the often more realistic setting in which group sizes,
 In this paper, the example we use throughout looks at the performance of these procedures under ideal conditions (an oracle prior setup), i.e. the performance of these procedures when the true effect size matches the model expectations as closely as possible: the population effect size is either equal to zero or it matches the effect size parameter (SPRT, Fixed, GS-designs) or the mode of the prior distribution on effect size (SBF) in the alternative model [@stefan2020: p. 15]. 
 
 Add writing on the modified SPRT. 
+Add writing on the combination of fixed sample NHST and equivalence test.
+Rewrite settings for O'Brien-Fleming: look after 50%, 75%, 100%.
+Add writing on the implemented bias corrections for GS designs - median unbiased ES from rpact
+Add writing on naive effect size estimate Bayes
+Rephrase decision wording: refer to rejecting the null, rejecting the alternative, and inconclusive.
+Change writing modified SBF prior from Stefan et al. 2020 - informed normal distribution centered on the population effect size (mean 0.5, variance 0.3). 
+
+Here's some examples on how SBFs are used in practice https://github.com/nicebread/BFDA/blob/master/BFDA_examples.md 
 
 \newpage
 
@@ -467,8 +476,9 @@ This manuscript was created using `r cite_r("r-refs.bib")`.
 ## *True Negative, False Positive, and Inconclusive Rate*
 
 ```{r include = F}
-zz = gzfile("simulations/simulation001.csv.gz", 'rt')
-df = read.csv(zz, header = T)
+df = read.csv("simulations/simulation001.csv")
+#zipped.df = gzfile("simulations/simulation001.csv.gz", 'rt')
+#df = read.csv(zipped.df, header = T)
 
 df = df %>% 
   mutate(name = case_when(proc == "Fixed" ~ "Fixed",
@@ -480,15 +490,15 @@ df = df %>%
 
 t1 = df %>% filter(d_forpower == d_actual) %>%
   group_by(name) %>% 
-  summarize(true_positive = mean(decision == "Reject") %>% round(2),
-            inconclusive = mean(decision == "FTR") %>% round(2),
-            false_negative = mean(decision == "SupportNull") %>% round(2))
+  summarize(true_positive = mean(decision == "reject.null") %>% round(2),
+            inconclusive = mean(decision == "inconclusive") %>% round(2),
+            false_negative = mean(decision == "reject.alt") %>% round(2))
 
 t2 = df %>% filter(d_actual == 0) %>% 
   group_by(name) %>% 
-  summarize(true_negative = mean(decision == "SupportNull") %>% round(2),
-            inconclusive = mean(decision == "FTR") %>% round(2),
-            false_positive = mean(decision == "Reject") %>% round(2))
+  summarize(true_negative = mean(decision == "reject.alt") %>% round(2),
+            inconclusive = mean(decision == "inconclusive") %>% round(2),
+            false_positive = mean(decision == "reject.null") %>% round(2))
 ```
 
 ```{r, echo = FALSE}

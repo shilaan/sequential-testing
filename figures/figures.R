@@ -15,27 +15,21 @@ library(metafor)
 #Insert code section with Ctrl+Shift+R
 
 # TO DO -------------------------------------------------------------------
-# Make decision wording consistent across procedures. 
-# Add simulation with equivalence test -- what should I set as the bounds? Notes meeting DL: "flip de toets. De type I fout van de equivalentie toets is gelijk aan de type II fout van de NHST. Sequential analyse jennison en turnboll 2000 group-sequential methods with applications to clinical trials. De simpelste combinatie van een equivalentie toets en de NHST"
-# Rewrite in manuscript: Settings for O'Brien-Fleming: look after 50%, 75%, 100%.
+# Bayes: add effect size correction
+# Run meta-analysis and include meta-analytic effect size figure 
+# Take figure 9 out of paper
+# Maybe change figures (higher, less wide, labels with \n)
 # Rerun simulations on Sherlock.
-# Rewrite in manuscript: Implemented bias corrections for GS designs - median unbiased ES from rpact
-# For the Bayes procedure, also add the normal effect size estimate (Cohen's d). 
-# Include meta-analytic effect size 
-# Perhaps change prior for the SBF: r scale value of 0.5 - problem is power is too low. Perhaps use prior from Stefan et al. 2020 - informed normal distribution centered on the population effect size. 
-# Optimize Bayes thresholds using the R Package NMOF (differential evolution algorithm - see Stefan)
-
+# Run with 90% power (ideally, both?)
 # Add in discussion/limitation section: We do not discuss adaptive designs, which extend GS designs and allow for even more flexibility while controlling error rates. Or: Implement adaptive designs???
 # Emphasize that there is no bias correction available for the ISP. Also emphasize that the ISP is the only procedure that is *not* median unbiased.
 # Change tables: show results for all effect sizes
-# Rephrase wording: instead of fail to reject, simply refer to Rejecting the Null and Rejecting the Alternative.
-# Make example in the paper 90% power?
 # Go through comments Jake - Chunchen - Charles
-# Speed up code: Datatable? 
+# Speed up cod w Datatable 
 # Rewrite to call MSE reducible error 
 # Make density by segment plot
-# Also vary number of looks
-# Include meta-analytic effect size figure 
+# Also vary number of looks (and power)
+# Change group-sequential designs figures (binding futility bounds changed the N)
 
 #=============================================================================#
 ########################## FIGURE 1A: POCOCK EXAMPLE ########################## 
@@ -611,8 +605,9 @@ dev.off()
 ########################## FIGURE 4: ERROR RATES ########################## 
 #=========================================================================#
 rm(list = ls())
-zz = gzfile("simulations/simulation001.csv.gz", 'rt')
-df = read.csv(zz, header = T)
+df = read.csv("simulations/simulation001.csv")
+#zipped.df = gzfile("simulations/simulation001.csv.gz", 'rt')
+#df = read.csv(zipped.df, header = T)
 
 df = df %>% 
   mutate(proc = fct_relevel(proc, "Fixed", after = 0),
@@ -620,24 +615,23 @@ df = df %>%
                            proc == "Bayes" ~ 2,
                            proc == "ISP" ~ 3,
                            proc == "asP" ~ 4,
-                           proc == "asOF"~ 4),
-         line = as.factor(case_when(proc == "asP" ~ 2,
-                                    proc != "asP" ~ 1)))
+                           proc == "asOF"~ 5,
+                           proc == "SPRT" ~ 6))
 
-
-facet.label = c("Fixed Sample Hypothesis Test", "Sequential Bayes Factor", 
-                "Independent Segments Procedure", "Group-Sequential Procedure (Pocock)")
-names(facet.label) = c(1, 2, 3, 4)
+facet.label = c("Fixed Hypothesis and Equivalence Test", "Sequential Bayes Factor", 
+                "Independent Segments Procedure", "Pocock-like GS design",
+                "O'Brien-Fleming-like GS design", "Modified Sequential Probability Ratio Test")
+names(facet.label) = c(1, 2, 3, 4, 5, 6)
 
 ER = df %>% 
-  filter(d_actual != -0.2 & proc!= "asOF") %>% 
-  mutate(correct_inference = ifelse(d_actual > 0 & decision == "Reject", 1,
-                                    ifelse(d_actual == 0 & decision == "SupportNull", 1, 
+  filter(d_actual != -0.2) %>% 
+  mutate(correct_inference = ifelse(d_actual > 0 & decision == "reject.null", 1,
+                                    ifelse(d_actual == 0 & decision == "reject.alt", 1, 
                                            0)),
-         incorrect_inference = ifelse(d_actual == 0 & decision == "Reject", 1,
-                                      ifelse(d_actual > 0 & decision == "SupportNull", 1,
+         incorrect_inference = ifelse(d_actual == 0 & decision == "reject.null", 1,
+                                      ifelse(d_actual > 0 & decision == "reject.alt", 1,
                                              0)),
-         inconclusive = ifelse(decision == "FTR", 1, 0))
+         inconclusive = ifelse(decision == "inconclusive", 1, 0))
 
 ER_summary = ER %>% 
   group_by(proc, facet, d_actual) %>% 
@@ -645,7 +639,7 @@ ER_summary = ER %>%
             incorrect_rate = mean(incorrect_inference),
             inconclusive_rate = mean(inconclusive))
 
-tiff(file="figures/figure4.tiff",width=1500,height=1400, units = "px", res = 300)
+tiff(file="figures/figure4.tiff",width=2350,height=1500, units = "px", res = 300)
 ggplot(data = ER_summary %>% filter(d_actual > 0), mapping = aes(x = d_actual, y = correct_rate)) +
   facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
   geom_line(color = "green", alpha = 0.7) +
@@ -662,31 +656,31 @@ ggplot(data = ER_summary %>% filter(d_actual > 0), mapping = aes(x = d_actual, y
   labs(x = "True Effect Size (Cohen's d)", y = "True Positives, False Negatives, Inconclusive Evidence")
 dev.off()
 
-# Error Rates Table 2a [see code in manuscript.Rmd]
+# Error Rates Table 2a [see code in manuscript.Rmd] #change code in manuscript
 t1 = df %>% filter(d_forpower == d_actual) %>%
   group_by(proc) %>% 
-  summarize(true_positive = mean(decision == "Reject"),
-            inconclusive = mean(decision == "FTR"),
-            false_negative = mean(decision == "SupportNull"))
+  summarize(true_positive = mean(decision == "reject.null"),
+            inconclusive = mean(decision == "inconclusive"),
+            false_negative = mean(decision == "reject.alt"))
 
 # Error Rates Table 2b [see code in manuscript.Rmd]
 t2 = df %>% filter(d_actual == 0) %>% 
   group_by(proc) %>% 
-  summarize(true_negative = mean(decision == "SupportNull"),
-            inconclusive = mean(decision == "FTR"),
-            false_positive = mean(decision == "Reject"))
+  summarize(true_negative = mean(decision == "reject.alt"),
+            inconclusive = mean(decision == "inconclusive"),
+            false_positive = mean(decision == "reject.null"))
 
 #========================================================================#
 ########################## FIGURE 5: Efficiency ########################## 
 #========================================================================#
 
-facet.label = c("Fixed Sample Hypothesis Test", "Sequential Bayes Factor", 
-                "Independent Segments Procedure", "Group-Sequential Procedure")
-names(facet.label) = c(1, 2, 3, 4)
+#facet.label = c("Fixed Sample Hypothesis Test", "Sequential Bayes Factor", 
+#                "Independent Segments Procedure", "Group-Sequential Procedure")
+#names(facet.label) = c(1, 2, 3, 4)
 
 E_n = df %>% group_by(proc, d_actual) %>% 
   #mutate(proc = fct_relevel(proc, "Fixed", after = 0)) %>% 
-  summarize(E_n = mean(n)) # %>% 
+  summarize(E_n = mean(n_cumulative)) # %>% 
 #mutate(proc = case_when(proc == "Fixed" ~ "Fixed",
 #                        proc == "asP" ~ "Pocock",
 #                        proc == "asOF" ~ "O'Brien-Fleming",
@@ -694,18 +688,19 @@ E_n = df %>% group_by(proc, d_actual) %>%
 #                        proc == "ISP" ~ "ISP")) %>% 
 #rename(Procedure = proc)
 
-tiff(file="figures/figure5.tiff",width=1400,height=1300, units = "px", res = 300)
+tiff(file="figures/figure5.tiff",width=1800,height=1500, units = "px", res = 300)
 ggplot(data = E_n, mapping = aes(x = d_actual, y = E_n, group = proc, linetype = proc, color = proc)) +
   geom_line(size = 1.2) +
-  annotate(geom = "text", x = 0.2, y = 45.5, label = "Bayes", color = "red") +
+  annotate(geom = "text", x = 0.3, y = 47.7, label = "Bayes", color = "red") +
   #annotate(geom = "segment", x = 0.54, y = 48, xend = 0.66, yend = 48, linetype = "longdash", color = "red", size = 1) +
   annotate(geom = "text", x = 0.85, y = 50, label = "Fixed") +
-  annotate(geom = "text", x = 0.95, y = 37, label = "O'Brien \n Fleming", color = "green") +
-  annotate(geom = "text", x = 0.93, y = 30, label = "ISP", color = "blue") +
-  annotate(geom = "text", x = 0.34, y = 41.3, label = "Pocock", color = "grey") +
+  annotate(geom = "text", x = 0.65, y = 41, label = "O'Brien \n Fleming", color = "green") +
+  annotate(geom = "text", x = -0.11, y = 28.2, label = "ISP", color = "blue") +
+  annotate(geom = "text", x = 0.75, y = 28, label = "Pocock", color = "grey") +
+  annotate(geom = "text", x = -0.1, y = 47, label = "mSPRT", color = "purple") + 
   theme_bw() +
-  scale_linetype_manual(values=c("solid", "twodash", "solid", "longdash", "dotted")) +
-  scale_color_manual(values=c("black", "green", "grey",  "red", "blue"))+
+  scale_linetype_manual(values=c("solid", "twodash", "solid", "longdash", "dotted", "dotdash")) +
+  scale_color_manual(values=c("black", "green", "grey",  "red", "blue", "purple"))+
   labs(x = "True Effect Size (Cohen's d)", y = "Average Sample Size") +
   scale_x_continuous(breaks = seq(-0.2, 1, 0.2),
                      limits = c(-0.2, 1)) +
@@ -726,39 +721,31 @@ dev.off()
 # Density of Obtained Effect Size Estimates
 # Excepted effect size ---> d = 0.5
 # True effect size == Hypothesized effect size (i.e., effect size powered for)
+# Add legend for corrected ES estimate 
 
-facet4 = data.frame(facet = 4, 
-                    line = 2,
-                    label1 = "O'Brien Fleming",
-                    label2 = "Pocock",
-                    x1 = -0.5, x2 = -0.3, y1 = 2, y2 = 1.75)
+median_ES = df %>% 
+  filter(d_actual == d_forpower) %>% 
+  group_by(facet) %>% 
+  summarize(ES_corrected = median(ES_corrected)) %>% 
+  pull(ES_corrected) %>% round(2)
 
-text = data.frame(facet = c(1, 2, 3, 4),
-                  line = 1,
-                  label = paste("Median = ", c(0.50, 0.51, 0.66, .54)),
-                  x = 0.85, y = 2)
-
-text2 = data.frame(facet = 4, line = 2, 
-                   label = "Median =  0.57", 
-                   x = 0.85, y = 1.75)
+text = data.frame(facet = 1:6,
+                  label = paste("Median = ", median_ES),
+                  x = 0.8, y = 1.6)
 
 density = function(dat) {
-  ggplot(data = dat, mapping = aes(x = ES, group = as.factor(line), linetype = as.factor(line))) +
-    geom_density(aes(linetype = line)) +
+  ggplot(data = dat, mapping = aes(x = ES)) +
+    geom_density() +
+    geom_density(mapping = aes(x = ES_corrected), linetype = "dashed") + 
     facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
     theme_bw() +
     labs(x = "Empirical Effect Size Estimate", y = "Density") +
     scale_x_continuous(limits = c(-0.5, 1.5)) +
     theme(legend.position = "none", strip.background = element_rect(fill = "white")) +
-    geom_segment(data = facet4, aes(x = x1, xend = x2, y = y1, yend = y1), linetype = "solid") +
-    geom_segment(data = facet4, aes(x = x1, xend = x2, y = y2, yend = y2), linetype = "dashed") +
-    geom_text(data = facet4, aes(x = x2, y = y1, label = label1, hjust = 0), size = 2.7) +
-    geom_text(data = facet4, aes(x = x2, y = y2, label = label2, hjust = 0), size = 2.7) +
-    geom_text(data = text, aes(x = x, y = y, label = label, hjust = 0), size = 2.7) +
-    geom_text(data = text2, aes(x = x, y = y, label = label, hjust = 0), size = 2.7)
+    geom_text(data = text, aes(x = x, y = y, label = label, hjust = 0), size = 2.7)
 }
 
-tiff(file="figures/figure6.tiff",width=1500,height=1200, units = "px", res = 300)
+tiff(file="figures/figure6.tiff",width=2350,height=1200, units = "px", res = 300)
 density(df %>% filter(d_forpower == d_actual))
 dev.off()
 
@@ -767,22 +754,20 @@ dev.off()
 #========================================================================================#
 # How does the procedure perform when d is unexpected?
 
-proc.label = c("O'Brien-Fleming", "Sequential Bayes Factor", "Independent Segments Procedure", "Pocock")
-names(proc.label) = c("asOF", "Bayes", "ISP", "asP")
-
-df = df %>% 
-  mutate(proc = fct_relevel(proc, "Fixed", "Bayes", "ISP", "asP", "asOF"))
-
 df_summary = df %>% 
-  group_by(proc, facet, line, d_actual) %>% 
-  summarize(mse = mean((ES - d_actual) ^2),
-            var = mean((ES - mean(ES))^2),
-            ES = median(ES)) %>% 
+  group_by(proc, facet, d_actual) %>% 
+  summarize(mse = mean((ES_corrected - d_actual) ^2),
+            var = mean((ES_corrected - mean(ES_corrected))^2),
+            median.ES = median(ES_corrected),
+            ES = mean(ES_corrected)) %>%
   mutate(bias = ES - d_actual,
-         bias.sq = (ES - d_actual)^2)
+         median.bias = median.ES - d_actual,
+         bias.sq = (ES - d_actual)^2,
+         median.bias.sq = (median.ES - d_actual)^2)
 
-tiff(file="figures/figure7.tiff",width=1500,height=1200, units = "px", res = 300)
-ggplot(data = df_summary %>% filter(proc != "Fixed"), 
+# Bias
+tiff(file="figures/figure7a.tiff",width=2300,height=1200, units = "px", res = 300)
+ggplot(data = df_summary, 
        mapping = aes(x = d_actual, y = bias)) +
   theme_bw() +
   theme(strip.background = element_rect(fill = "white")) +
@@ -790,8 +775,24 @@ ggplot(data = df_summary %>% filter(proc != "Fixed"),
   geom_segment(aes(x = d_actual, xend = d_actual, y = 0, yend = bias),
                color = "red", linetype = "dashed") + 
   geom_point() +
-  #facet_wrap(vars(proc)) +
-  facet_wrap(vars(proc), labeller = labeller(proc = proc.label)) +
+  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
+  theme(legend.position = "none") +
+  scale_x_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
+                     limits = c(-0.2, 1)) +
+  labs(x = "True Effect Size (Cohen's d)", y = "Mean Estimated Effect Size - True Effect Size")
+dev.off()
+
+# Median bias
+tiff(file="figures/figure7b.tiff",width=2300,height=1200, units = "px", res = 300)
+ggplot(data = df_summary, 
+       mapping = aes(x = d_actual, y = median.bias)) +
+  theme_bw() +
+  theme(strip.background = element_rect(fill = "white")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray") + 
+  geom_segment(aes(x = d_actual, xend = d_actual, y = 0, yend = median.bias),
+               color = "red", linetype = "dashed") + 
+  geom_point() +
+  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
   theme(legend.position = "none") +
   scale_x_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
                      limits = c(-0.2, 1)) +
@@ -801,29 +802,30 @@ dev.off()
 #===========================================================================#
 ########################## FIGURE 8: BIAS-VARIANCE ########################## 
 #===========================================================================#
-df_summary = df %>% 
-  group_by(proc, facet, line, d_actual) %>% 
-  summarize(mse = mean((ES - d_actual) ^2),
-            var = mean((ES - mean(ES))^2),
-            ES = mean(ES)) %>% 
-  mutate(bias = ES - d_actual,
-         bias.sq = (ES - d_actual)^2)
+#df_summary = df %>% 
+#  group_by(proc, facet, line, d_actual) %>% 
+#  summarize(mse = mean((ES - d_actual) ^2),
+#            var = mean((ES - mean(ES))^2),
+#            ES = mean(ES)) %>% 
+#  mutate(bias = ES - d_actual,
+#         bias.sq = (ES - d_actual)^2)
 
-df_summary = df_summary %>% 
+#df_summary = df_summary %>% 
   #mutate(proc = fct_relevel(proc, "Fixed", after = 0)) %>% 
-  filter(proc != "asOF")
+#  filter(proc != "asOF")
 
-facet.label[4] = "Group-Sequential (Pocock)"
+#facet.label[4] = "Group-Sequential (Pocock)"
 facet1 = data.frame(facet = 1,
                     label1 = "Mean Squared Error",
                     label2 = "Variance",
                     label3 = "Squared Bias",
                     x1 = -0.2, x2 = -0.04, y1 = .13, y2 = .11, y3 = .09)
 
-tiff(file="figures/figure8.tiff",width=1500,height=1200, units = "px", res = 300)
+tiff(file="figures/figure8.tiff",width=2300,height=1300, units = "px", res = 300)
 ggplot(data = df_summary, mapping = aes(x = d_actual, y = bias.sq)) +
   facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
   theme_bw() +
+  #geom_line(mapping = aes(y = median.bias.sq), color = "grey", linetype = "dotdash") + 
   geom_smooth(color = "black", se = F, size = .6) +
   geom_smooth(mapping= aes(y = mse), se = F, size = .6,
               color = "red", linetype = "dashed") + #MSE
@@ -845,23 +847,28 @@ dev.off()
 #==============================================================================================#
 ########################## FIGURE 9: MSE CONDITIONAL ON STOPPING TIME ########################## 
 #==============================================================================================#
-sub = df %>% filter(proc != "Fixed" & proc != "asOF" & d_forpower == d_actual) %>% 
-  group_by(proc, facet, line, segment, d_actual) %>% 
-  summarize(mse = mean((ES - d_actual) ^2)) %>% ungroup() %>% 
-  select(proc, segment, mse) %>% 
-  bind_rows(df %>% filter(proc != "Fixed" & proc != "asOF" & d_forpower == d_actual) %>%
-              group_by(proc) %>% 
-              summarize(mse = mean((ES - d_actual) ^2)) %>% 
-              mutate(segment = rep(4))) %>% 
-  mutate(proc = fct_relevel(proc, "Bayes", "asP", "ISP"))
+#Take this figure out of paper
+sub = df %>% filter(proc != "Fixed" & d_forpower == d_actual) %>% 
+  group_by(proc, facet, segment, d_actual) %>% 
+  summarize(mse = mean((ES_corrected - d_actual)^2)) %>% ungroup() %>% 
+  select(proc, facet, segment, mse) %>% 
+  bind_rows(df %>% filter(proc != "Fixed" & d_forpower == d_actual) %>%
+              group_by(proc, facet) %>% 
+              summarize(mse = mean((ES_corrected - d_actual)^2)) %>% 
+              mutate(segment = rep(4))) #%>% 
+  #mutate(proc = fct_relevel(proc, "Bayes", "asP", "ISP"))
 
-proc.label = c("Sequential Bayes Factor", "Independent Segments Procedure", "Group-Sequential Procedure (Pocock)")
-names(proc.label) = c("Bayes", "ISP", "asP")
+facet.label = c("Fixed Hypothesis \n and Equivalence Test", 
+                "Sequential Bayes Factor", 
+                "Independent Segments \n Procedure", 
+                "Pocock-like GS design",
+                "O'Brien-Fleming-like GS design", 
+                "Modified Sequential \n Probability Ratio Test")
+names(facet.label) = c(1, 2, 3, 4, 5, 6)
 
-
-tiff(file="figures/figure9.tiff",width=2200,height=1200, units = "px", res = 300)
+tiff(file="figures/figure9.tiff",width=2900,height=750, units = "px", res = 300)
 ggplot(data = sub, mapping = aes(x = as.factor(segment), y = mse)) +
-  facet_wrap(vars(proc), labeller = labeller(proc = proc.label)) +
+  facet_wrap(vars(facet), labeller = labeller(facet = facet.label), nrow = 1) +
   geom_segment(aes(x = segment, xend = segment, y = 0, yend = mse),
                color = "red", linetype = "dashed") +
   geom_point() +
@@ -874,7 +881,7 @@ dev.off()
 
 #tiff(file="Figure10.tiff",width=2200,height=1200, units = "px", res = 300)
 #ggplot(data = sub, mapping = aes(x = as.factor(segment), y = mse)) +
-#  facet_wrap(vars(proc), labeller = labeller(proc = proc.label)) +
+#  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
 #  geom_bar(stat = "identity", fill = "lightgrey", color = "black", width = .8) +
 #  theme_bw() +
 #  theme(strip.background =element_rect(fill="white")) +
@@ -887,16 +894,13 @@ dev.off()
 ########################## FIGUREXI: MEDIAN EFFECT SIZE ESTIIMATE ########################## 
 #==========================================================================================#
 med = df %>% 
-  group_by(proc, d_actual) %>% 
-  summarize(medianES = median(ES)) 
+  group_by(proc, facet, d_actual) %>% 
+  summarize(medianES = median(ES_corrected)) 
 
-proc.label = c("Fixed Sample Hypothesis Test", "Sequential Bayes Factor", "Independent Segments Procedure", "Group-Sequential Procedure (Pocock)")
-names(proc.label) = c("Fixed", "Bayes", "ISP", "asP")
-
-tiff(file="figures/figurexi.tiff",width=1500,height=1200, units = "px", res = 300)
-ggplot(data = med %>% filter(proc != "asOF"), mapping = aes(x = d_actual, y = medianES)) +
+tiff(file="figures/figurexi.tiff",width=2000,height=1400, units = "px", res = 300)
+ggplot(data = med, mapping = aes(x = d_actual, y = medianES)) +
   geom_point() +
-  facet_wrap(vars(proc), labeller = labeller(proc = proc.label)) +
+  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
   theme_bw() +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey") +
   theme(legend.position = "none", strip.background = element_rect(fill = "white")) +
@@ -918,7 +922,7 @@ dev.off()
 
 #facet4 = facet4 %>% mutate(y1 = 2.5, y2 = 2)
 #tiff(file="figurexii.tiff",width=1500,height=1200, units = "px", res = 300)
-#density(df %>% filter(d_forpower == d_actual & decision == "Reject"))
+#density(df %>% filter(d_forpower == d_actual & decision == "reject.null"))
 #dev.off()
 
 #================================================================================================#
@@ -926,6 +930,7 @@ dev.off()
 #================================================================================================#
 #rm(list = ls())
 #df = read.csv("simulations/simulation001.csv")
+# Recode this later
 df = df %>% 
   mutate(proc = fct_relevel(proc, "Fixed", "ISP", "asP", "asOF", "Bayes"),
          n = ifelse(proc == "ISP", 25, n)) 
