@@ -15,7 +15,6 @@ library(metafor)
 #Insert code section with Ctrl+Shift+R
 
 # TO DO -------------------------------------------------------------------
-# Bayes: add effect size correction
 # Run meta-analysis and include meta-analytic effect size figure 
 # Take figure 9 out of paper
 # Maybe change figures (higher, less wide, labels with \n)

@@ -15,7 +15,6 @@ library(NCmisc)
 library(here)
 
 ########################## GLOBAL HELPER FUNCTIONS ##########################
-
 generate_data = function(nsims, n, d) { 
   # Generate raw data
   raw = lapply(1:nsims, function(i) {
@@ -43,34 +42,11 @@ run_tests = function(df, n, proc, segment = 1, alpha) {
   
 } 
 
-# To do:------
-# Reconcile ES estimate from BFDA and other functions 
-# Note that BFDA calculates Cohen's d from the t-statistic, which leads to a slight overestimation of ES 
-
-#run_tests = function(df, n, proc, segment = 1, alpha) {
-#  
-#  # Run t-tests and create data-frame
-#  df %>% group_by(nsim) %>% 
-#    summarize(p = t.test(m1, m2, alternative = "greater", var.equal = T)$p.value,
-#              t = t.test(m1, m2, alternative = "greater", var.equal = T)$statistic,
-#              proc = proc, 
-#              segment = segment, 
-#              alpha = alpha, 
-#              n = mean(n), 
-#              sd1 = sd(m1), 
-#              sd2 = sd(m2),
-#              m1 = mean(m1), 
-#              m2 = mean(m2)) %>% 
-#    mutate(sdpooled = sqrt((sd1^2 +sd2^2)/2)) %>% 
-#    mutate(ES = (m1 - m2) / sdpooled,
-#           emp.ES = 2*t / sqrt(2*n-2)) #from BFDA
-#} 
 ########################## GLOBAL PARAMETERS ##########################
 max_n_segments = 3
 alpha_total = 0.05
 target_power = 0.8
 d_forpower = 0.5
-
 
 ########################## FULL PROCEDURE FUNCTION ##########################
 
@@ -322,7 +298,7 @@ run_all_procedures = function(nsims){
   ########################## INDEPENDENT SEGMENTS PROCEDURE FUNCTION ########################## 
 
   ########################## READ ISP FUNCTIONS ##########################
-  source("simulations/isp-engine.R") # Obtained from Ulrich & Miller 2020
+  source("simulations/isp-helpers.R") # Obtained from Ulrich & Miller 2020
 
   # Find alpha weak
   find_alpha_weak <- function(alpha_total, max_n_segments, alpha_strong) {
@@ -453,8 +429,15 @@ run_all_procedures = function(nsims){
              ),
              segment = n_cumulative/n,
              d_forpower = d_forpower,
-             power = target_power,
-             ES_corrected = emp.ES) #emp.ES = 2*t1$statistic / sqrt(2*nrow(df)-2)
+             power = target_power) %>% 
+      rowwise() %>% 
+      mutate(ES_corrected = integrate(EV, #EV function in bayes-helpers.R: written by Angelika Stefan
+                                      lower = -Inf,
+                                      upper = Inf,
+                                      t = statistic,
+                                      n1 = n_cumulative,
+                                      n2 = n_cumulative)$value 
+        ) #emp.ES = 2*t1$statistic / sqrt(2*nrow(df)-2), ES_corrected = mean of posterior distribution
     
     data.table(df)[, .(id, proc, segment, n, n_cumulative, d_forpower, d_actual = true.ES, power, decision, ES = emp.ES, ES_corrected)]
     
@@ -463,12 +446,15 @@ run_all_procedures = function(nsims){
   ########################## RUN SEQUENTIAL BAYES ##########################
   
   ########################## SET PARAMETERS  ##########################
+  source("simulations/bayes-helpers.R") # Helper functions obtained from the BFDA package and with very generous help from Angelika Stefan
   d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
   
   system.time(dt <- mclapply(1:length(d_forpower), 
                              function(i) run_sbf(),
                              mc.cores = 2)) 
   print("The Sequential Bayes Factor has finished running!")
+  system("say The Sequential Bayes Factor has finished running!")
+  
   
   bayes = data.table::rbindlist(dt)
   
@@ -559,7 +545,6 @@ run_all_procedures = function(nsims){
   
   sprt = data.table::rbindlist(dt)
   
-  
   ########################## CREATE FINAL DATA-FRAME ##########################
   df = bind_rows(fixed, group_sequential, isp, bayes, sprt)
   
@@ -568,7 +553,6 @@ run_all_procedures = function(nsims){
 }
 
 ########################## RUN ALL PROCEDURES ##########################
-
 system.time(dt <- mclapply(1, function(i) run_all_procedures(nsims = 20000),
                            mc.cores = 2)) #20000 sims takes ~2.5-3 hours to run 
 system("say All your procedures have finished running!")
@@ -577,13 +561,12 @@ df = data.table::rbindlist(dt)
 ########################## CREATE FINAL DATA-FRAME ##########################
 
 write.csv(df, "simulations/simulation001.csv", row.names = F)
-
 #write.csv(df, file=gzfile("simulations/simulation001.csv.gz"), row.names = F) #write in zip to compress
 
 ########################## REMOVE REDUNDANCIES ##########################
 #Remove redundant functions from the isp-engine
 {
-  file_parsed = parse("simulations/isp-engine.R")
+  file_parsed = parse("simulations/isp-helpers.R")
   
   is_function = function (expr) {
     if (! is_assign(expr))
@@ -608,10 +591,8 @@ write.csv(df, "simulations/simulation001.csv", row.names = F)
 
 ########################## READ IN DATA ##########################
 df = read.csv("simulations/simulation001.csv")
-
 #zipped.df = gzfile("simulations/simulation001.csv.gz", 'rt')
 #df = read.csv(zipped.df, header = T) #read in data
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 ############################################################################

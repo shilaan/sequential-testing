@@ -1,5 +1,5 @@
 ---
-title             : "Sequential Hypothesis Testing: A Comparison of Group-Sequential Designs, the Sequential Bayes Factor, and the Independent Segments Procedure"
+title             : "Group-Wise Sequential Hypothesis Testing"
 shorttitle        : "Sequential Hypothesis Testing"
 
 author: 
@@ -18,7 +18,7 @@ note: "\\clearpage"
 author_note: 
 
 abstract: >
-  Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. In this practical guide, I outline the commonalities and differences between three sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, and the independent segments procedure. Using Monte-Carlo simulations, I compare the performance of these procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing. 
+  Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. In this practical guide, I outline the commonalities and differences between four sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, the independent segments procedure, and the modified sequential probability ratio test. I illustrate how these procedures can be implemented in a group-wise manner. Using Monte-Carlo simulations, I compare the performance of these procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing. 
   
 keywords          : "sequential analysis, hypothesis testing, efficiency, effect size estimation, bias"
 wordcount         : "-"
