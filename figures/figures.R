@@ -47,7 +47,7 @@ alpha_gs = function(proc, return = "n") {
     beta = 0.2,
     kMax = 3, 
     typeOfDesign = proc,
-    typeBetaSpending= bs) 
+    typeBetaSpending= bs) #also specify information rates
   
   # Get parameters
   parameters = getSampleSizeMeans(design = design, groups = 2, alternative = 0.5)
@@ -723,10 +723,7 @@ dev.off()
 ########################## FIGURE 4: ERROR RATES ########################## 
 #=========================================================================#
 # WITHOUT THE MSPRT
-rm(list = ls())
-df = read.csv("simulations/simulation001.csv")
-#zipped.df = gzfile("simulations/simulation001.csv.gz", 'rt')
-#df = read.csv(zipped.df, header = T)
+df = read.csv("simulations/data.csv")
 
 df = df %>% 
   mutate(
@@ -790,7 +787,7 @@ ggplot(data = ER_summary %>% filter(d_actual > 0), mapping = aes(x = d_actual, y
        y = "True Positives, False Negatives, Inconclusive Evidence")
 dev.off()
 
-# Error Rates Table 2a [see code in manuscript.Rmd] #change code in manuscript
+# Error Rates Table 2a [see code in manuscript.Rmd] 
 t1 = df %>% filter(d_forpower == d_actual) %>%
   group_by(proc) %>% 
   summarize(true_positive = mean(decision == "reject.null"),
@@ -809,10 +806,6 @@ t2 = df %>% filter(d_actual == 0) %>%
 ########################## FIGURE 4: ERROR RATES ########################## 
 #=========================================================================#
 # WITH MSPRT
-# rm(list = ls())
-# df = read.csv("simulations/simulation001.csv")
-# #zipped.df = gzfile("simulations/simulation001.csv.gz", 'rt')
-# #df = read.csv(zipped.df, header = T)
 # 
 # df = df %>% 
 #   mutate(
@@ -900,8 +893,8 @@ ggplot(data = E_n, mapping = aes(x = d_actual, y = E_n, group = proc, linetype =
   annotate(geom = "text", x = 0.3, y = 47.7, label = "Bayes", color = "red") +
   #annotate(geom = "segment", x = 0.54, y = 48, xend = 0.66, yend = 48, linetype = "longdash", color = "red", size = 1) +
   annotate(geom = "text", x = 0.85, y = 50, label = "Fixed") +
-  annotate(geom = "text", x = 0.65, y = 41, label = "O'Brien \n Fleming", color = "green") +
-  annotate(geom = "text", x = -0.11, y = 28.2, label = "ISP", color = "blue") +
+  annotate(geom = "text", x = 0.87, y = 35, label = "O'Brien \n Fleming", color = "green") +
+  annotate(geom = "text", x = 0.23, y = 43.2, label = "ISP", color = "blue") +
   annotate(geom = "text", x = 0.75, y = 28, label = "Pocock", color = "grey") +
   #annotate(geom = "text", x = -0.1, y = 47, label = "mSPRT", color = "purple") + 
   theme_bw() +
@@ -1005,8 +998,12 @@ density = function(dat) {
     scale_x_continuous(limits = c(-0.5, 1.5)) +
     #scale_y_continuous(limits=c(0,3)) +
     theme(legend.position = "none", strip.background = element_rect(fill = "white")) +
-    geom_text(data = text_corrected, aes(x = x, y = y, label = label, hjust = 0), size = 2.7) +
-    geom_text(data = text_uncorrected, aes(x = x, y = y, label = label, hjust = 0), size = 2.7)
+    geom_text(data = text_corrected, 
+              aes(x = x, y = y, label = label, hjust = 0), 
+              size = 2.7) +
+    geom_text(data = text_uncorrected, 
+              aes(x = x, y = y, label = label, hjust = 0), 
+              size = 2.7)
 }
 
 tiff(file="figures/figure6.tiff",width=2350,height=1200, units = "px", res = 300)
@@ -1020,14 +1017,18 @@ dev.off()
 
 df_summary = df %>% 
   group_by(proc, facet, d_actual) %>% 
-  summarize(mse = mean((ES_corrected - d_actual) ^2),
-            var = mean((ES_corrected - mean(ES_corrected))^2),
-            median.ES = median(ES_corrected),
-            ES = mean(ES_corrected)) %>%
-  mutate(bias = ES - d_actual,
-         median.bias = median.ES - d_actual,
-         bias.sq = (ES - d_actual)^2,
-         median.bias.sq = (median.ES - d_actual)^2)
+  summarize(
+    mse = mean((ES_corrected - d_actual) ^2),
+    var = mean((ES_corrected - mean(ES_corrected))^2),
+    median.ES = median(ES_corrected),
+    ES = mean(ES_corrected)
+    ) %>%
+  mutate(
+    bias = ES - d_actual,
+    median.bias = median.ES - d_actual,
+    bias.sq = (ES - d_actual)^2,
+    median.bias.sq = (median.ES - d_actual)^2
+    )
 
 # Bias
 tiff(file="figures/figure7a.tiff",width=2300,height=1200, units = "px", res = 300)
@@ -1079,11 +1080,17 @@ dev.off()
 #  filter(proc != "asOF")
 
 #facet.label[4] = "Group-Sequential (Pocock)"
-facet1 = data.frame(facet = 1,
-                    label1 = "Mean Squared Error",
-                    label2 = "Variance",
-                    label3 = "Squared Bias",
-                    x1 = -0.2, x2 = -0.04, y1 = .13, y2 = .11, y3 = .09)
+facet1 = data.frame(
+  facet = 1,
+  label1 = "Mean Squared Error",
+  label2 = "Variance",
+  label3 = "Squared Bias",
+  x1 = -0.2, 
+  x2 = -0.04, 
+  y1 = .13, 
+  y2 = .11, 
+  y3 = .09
+  )
 
 tiff(file="figures/figure8.tiff",width=2300,height=1300, units = "px", res = 300)
 ggplot(data = df_summary, mapping = aes(x = d_actual, y = bias.sq)) +
@@ -1256,7 +1263,7 @@ dev.off()
 ##################### FIGUREXIII: META-ANALYTIC EFFECT SIZE ESTIMATE ##################### 
 #========================================================================================#
 #rm(list = ls())
-#df = read.csv("simulations/simulation001.csv")
+#df = read.csv("simulations/data.csv")
 # Recode this later
 df = df %>% 
   mutate(proc = fct_relevel(proc, "Fixed", "ISP", "asP", "asOF", "Bayes"),
@@ -1294,10 +1301,12 @@ meta_analysis = data.frame(
     unnest(cols = c(.)) %>% 
     rename(., "meta" = .) %>% 
     select(meta)) %>% 
-  mutate(proc = fct_relevel(proc, "Fixed Sample Hypothesis Test", 
-                            "Sequential Bayes Factor", 
-                            "Group-Sequential (Pocock)", 
-                            "O'Brien-Fleming", "Independent Segments Procedure"))
+  mutate(proc = fct_relevel(
+    proc, "Fixed Sample Hypothesis Test", 
+    "Sequential Bayes Factor", 
+    "Group-Sequential (Pocock)", 
+    "O'Brien-Fleming", 
+    "Independent Segments Procedure"))
 
 tiff(file="figures/figurexiii.tiff",width=2900,height=1400, units = "px", res = 300)
 ggplot(data = meta_analysis, mapping = aes(x = d_actual, y = meta)) +

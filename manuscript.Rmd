@@ -18,9 +18,9 @@ note: "\\clearpage"
 author_note: 
 
 abstract: >
-  Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. In this practical guide, I outline the commonalities and differences between four sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, the independent segments procedure, and the modified sequential probability ratio test. I illustrate how these procedures can be implemented in a group-wise manner. Using Monte-Carlo simulations, I compare the performance of these procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing. 
+  Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. In this practical guide, I outline the commonalities and differences between three sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, and the Independent Segments Procedure. I illustrate how these procedures can be implemented in a group-wise manner. Using Monte-Carlo simulations, I compare the performance of these procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing. 
   
-keywords          : "sequential analysis, hypothesis testing, efficiency, effect size estimation, bias"
+keywords          : "sequential analysis, hypothesis testing, efficiency, estimation, bias"
 wordcount         : "-"
   
 bibliography      : ["references.bib","r-refs.bib"]
@@ -231,7 +231,7 @@ In the following section, I use Monte-Carlo simulations to compare group-sequent
 
 # Method
 
-By means of simulation, I will demonstrate the properties of the procedures under discussion in the context of testing hypotheses about positive mean differences between two independent groups (i.e., a one-tailed, two-sample *t*-test). A one-tailed test was chosen to allow for comparability with the ISP, which has been developed for one-tailed hypothesis testing only. The procedures will be compared in terms of three main properties: (a) error rates, (b) efficiency, and (c) accuracy in effect size estimation. In the following section, I briefly outline how each property is evaluated. 
+By means of simulation, I will demonstrate the properties of the procedures under discussion in the context of testing hypotheses about positive mean differences between two independent groups (i.e., a one-tailed, two-sample *t*-test). The procedures will be compared in terms of three main properties: (a) error rates, (b) efficiency, and (c) accuracy in effect size estimation. In the following section, I briefly outline how each property is evaluated. 
 
 ## Properties of Interest: Error Rates, Efficiency, and Accuracy
 
@@ -430,12 +430,13 @@ We have learned that scientific experiments can require substantial time, money,
 <!-- # To add -->
 
 <!-- Add in discussion/limitation section: We do not discuss adaptive designs, which extend GS designs and allow for even more flexibility while controlling error rates.  -->
-<!-- Address supplemental materials / OSF links, etc.  -->
-<!-- Fix Table 3  -->
-<!-- Change writing on Bayes True Negative. Because I used an oracle prior setup, true negative rates actually look great -->
+<!-- Discuss the power of the individual segments. Practical advice (can lead to guidance on choosing alpha strong; make sure that the alpha strong you set does not exclude the effect size you are interested in. Write reveal.effectsize function): You have to make sure that the individual segments are each powered to at least 50 percent to detect the hypothesized effect size: otherwise, the critical effect size will be higher than the hypothesized effect size, and you will thus systematically discard the effect sizes that you intended to detect! Show that with the example used, the first two independent segments are powered to ~30%. In all but the last segment, the critical effect size (the effect size you need to observe to claim significance) is a factor larger than the actual population effect that you powered your test for. It is thus impossible to get an unbiased estimate out of anything but the last segment.  When you obtain an effect size close to the true effect, the ISP procedure forces you to continue to the last segment, and *throw out that data*. (You can even graph this exaggeration ratio: create a table that shows the exact critical effect size for all possible combinations, and then you can just read off that plot that you're setting yourself up for overestimation). -->
+<!-- Discuss conditional bias (bias in effect size estimates conditional on stopping early) and unconditional bias (bias in effect size estimates across all studies). All other procedures have low unconditional bias, when you take the late termination studies into account, because they do cumulative analyses — the late termination studies are able to compensate for the bias in the early stage terminations. However, because the independent segments procedure is independent, each individual segment is biased and this is never accounted or compensated for. Thus, the ISP is unique among sequential procedures in that it not only has strong conditional bias (like most sequential procedures): it also has strong unconditional bias. [In this paper, I focused on two properties: conditional bias (bias in effect size estimates conditional on stopping early) and unconditional bias (bias in effect size estimates across all studies). I show that the independent segments procedure is unique among sequential procedures in that it not only has strong conditional bias (like all sequential procedures); it also has strong unconditional bias.] Emphasize that this is also what we see in Figure 3B: we only reject when d > 0.57. (This is not the case for, e.g., Pocock)   -->
+<!-- In the language of decision theory, the ISP is inadmissible: its total squared error risk exceeds that of other hypothesis testing procedures no matter what the true effect size may be.  -->
+<!-- Change writing on Bayes True Negative. Because I switched to an oracle prior setup, true negative rates actually look great -->
 <!-- Also refer to MSE as reducible error  -->
 <!-- Maybe add the figure of bimodality for all ISP parameters? Look through previous commits for this. -->
-<!-- Emphasize that there is no bias correction available for the ISP. Also emphasize that the ISP is the only procedure that is *not* median unbiased. Check if Lakens' comment makes this point? -->
+<!-- Emphasize that there is no bias correction available for the ISP, while there is for the SBF and GS. Also emphasize that the ISP is the only procedure that is *not* median unbiased. Check if Lakens' comment makes this point? -->
 <!-- Incorporate points from three new Psych Methods papers (Lakens, Sneurch/Erdfelder, Ulrich/Miller) -->
 <!-- Add writing on the combination of fixed sample NHST and equivalence test. -->
 <!-- Rephrase decision wording for the Fixed Sample Test combined with equivalence test: refer to rejecting the null, rejecting the alternative, and inconclusive. -->
@@ -446,7 +447,7 @@ We have learned that scientific experiments can require substantial time, money,
 <!-- Explain oracle prior setup: the population effect size is equal to the mode of the prior distribution on effect size in the alternative model [@stefan2020:p.15]  -->
 <!-- In this paper, the example we use throughout looks at the performance of these procedures under ideal conditions (an oracle prior setup), i.e. the performance of these procedures when the true effect size matches the model expectations as closely as possible: the population effect size is either equal to zero or it matches the effect size parameter (SPRT, Fixed, GS-designs) or the mode of the prior distribution on effect size (SBF) in the alternative model [@stefan2020: p. 15].  -->
 
-<!-- Here's some examples on how SBFs are used in practice https://github.com/nicebread/BFDA/blob/master/BFDA_examples.md  -->
+<!-- (To make the point that the setup of the simulations is more practical and realistic than previous ones), Show some data on what scientists actually do, e.g., how often they look at their data when they use the Sequential Bayes Factor. Here's some examples on how SBFs are used in practice https://github.com/nicebread/BFDA/blob/master/BFDA_examples.md  -->
 
 \newpage
 
@@ -475,7 +476,9 @@ This manuscript was created using `r cite_r("r-refs.bib")`.
 | **Aim** | Efficiently reject $H_0$ in favor of an alternative $H_1$ | Efficiently reject $H_0$ in favor of an alternative $H_1$ | Efficiently examine the evidence for $H_0$ relative to an alternative $H_1$, or vice versa |
 | **Nature of data**  | Cumulative  | Independent  | Cumulative  | Cumulative |
 | **Control of error rates** | Direct | Direct | Indirect (e.g., through simulation) |
-| **Flexibility** | Moderately Flexible | Highly Restrictive | Highly Flexible
+| **Bias correction procedure**| Available | Does not exist | Available |
+| **Flexibility** | Moderately flexible | Highly restrictive | Highly flexible |
+| **Acceptance of the null** | Possible | Impossible | Possible |
 
 \newpage
 
@@ -483,17 +486,19 @@ This manuscript was created using `r cite_r("r-refs.bib")`.
 ## *True Negative, False Positive, and Inconclusive Rate*
 
 ```{r include = F}
-df = read.csv("simulations/simulation001.csv")
-#zipped.df = gzfile("simulations/simulation001.csv.gz", 'rt')
-#df = read.csv(zipped.df, header = T)
+df = read.csv("simulations/data.csv")
 
 df = df %>% 
-  mutate(name = case_when(proc == "Fixed" ~ "Fixed",
-                           proc == "Bayes" ~ "Bayes",
-                           proc == "ISP" ~ "ISP",
-                           proc == "asP" ~ "Pocock",
-                           proc == "asOF"~ "O'Brien-Fleming"),
-         name = fct_relevel(name, "Fixed", "Pocock", "O'Brien-Fleming", "Bayes", "ISP"))
+  mutate(
+    name = case_when(
+      proc == "Fixed" ~ "Fixed",
+      proc == "Bayes" ~ "Bayes",
+      proc == "ISP" ~ "ISP",
+      proc == "asP" ~ "Pocock",
+      proc == "asOF"~ "O'Brien-Fleming"
+      ),
+    name = fct_relevel(name, "Fixed", "Pocock", "O'Brien-Fleming", "Bayes", "ISP")
+    )
 
 t1 = df %>% filter(d_forpower == d_actual) %>%
   group_by(name) %>% 
@@ -697,7 +702,7 @@ knitr::include_graphics("figures/figure8.tiff", dpi = 300)
 ## Figure 9
 ## *Mean Squared Error in Empirical Effect Size Estimates by Segment*  
 \noindent
-```{r, fig.heigth = 4, fig.width = 8}
+```{r, fig.heigth = 4, fig.width = 6}
 knitr::include_graphics("figures/figure9.tiff", dpi = 300)
 ```
 
