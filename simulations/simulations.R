@@ -219,28 +219,12 @@ run_all_procedures = function(nsims){
             ) 
         )
     }) %>% 
-      data.table::rbindlist() 
-    
-    conclusive <- tests %>% 
-      filter(decision!= "inconclusive") %>% 
-      group_by(nsim) %>% 
-      slice_head() #keep all data up to the first segment in which decision was made
-    
-    inconclusive <- tests %>% 
-      filter(decision=="inconclusive" & !nsim %in% conclusive$nsim) %>% 
-      group_by(nsim) %>% 
-      slice_tail() 
-    
-    tests <- bind_rows(conclusive, inconclusive) %>% 
-      arrange(nsim)
-    
-    # maybe just change to this:
-    # data.table::rbindlist() %>% 
-    #   arrange(nsim) %>% 
-    #   group_by(nsim) %>% 
-    #   mutate(final_segment = ifelse(decision != "inconclusive" | segment == 3, 1, 0)) %>% 
-    #   filter(final_segment == 1) %>% 
-    #   slice_head() %>% 
+      data.table::rbindlist() %>% 
+      arrange(nsim) %>%
+      group_by(nsim) %>%
+      mutate(final_segment = ifelse(decision != "inconclusive" | segment == 3, 1, 0)) %>%
+      filter(final_segment == 1) %>%
+      slice_head()
     
     #Get bias corrected ES estimate - first split data into individual segments
     raw_data = lapply(1:length(ns), function(i){

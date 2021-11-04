@@ -2,11 +2,9 @@
 library(data.table)
 library(rpact)
 library(pracma)
-#library(coda)
 library(tidyverse)
 library(parallel)
-#library(TOSTER)
-#library(NCmisc)
+library(TOSTER)
 library(here)
 
 ########################## GLOBAL HELPER FUNCTIONS ##########################
@@ -43,7 +41,8 @@ run_tests = function(df, n, proc, segment = 1, alpha) {
 ########################## GLOBAL PARAMETERS ##########################
 max_n_segments = 3
 alpha_total = 0.05
-d_forpower = 0.5
+
+# Simulations for supplemental data ---------------------------------------
 
 ########################## FULL PROCEDURE FUNCTION ##########################
 
@@ -51,7 +50,7 @@ run_all_procedures = function(nsims){
   
   ########################## FIXED SAMPLING PROCEDURE FUNCTION ########################## 
   
-  run_fixed = function(d_actual, target_power) {
+  run_fixed = function(d_actual, d_forpower, target_power) {
     
     ########################## FIXED SAMPLE ##########################
     
@@ -59,13 +58,14 @@ run_all_procedures = function(nsims){
     n_fixed = ceiling(
       power.t.test(
         delta = d_forpower, 
+        #delta = d_actual, 
         sig.level = alpha_total, 
         power = target_power, 
         type = "two.sample", 
         alternative = "one.sided")$n)
     
     # RUN FIXED SAMPLE NHST
-    set.seed(1234*(d_forpower*target_power))
+    set.seed(1234*(d_actual*target_power))
     fixed = generate_data(
       nsims = nsims,
       n = n_fixed, 
@@ -81,6 +81,7 @@ run_all_procedures = function(nsims){
         n_cumulative = n, 
         ES_corrected = ES,
         d_forpower = d_forpower,
+        #d_forpower = d_actual,
         d_actual = d_actual, 
         power = target_power
       )
@@ -136,12 +137,15 @@ run_all_procedures = function(nsims){
   ########################## RUN FIXED SAMPLING PROCEDURE ##########################
   
   ########################## SET PARAMETERS ##########################
-  d_actual = rep(c(0.2, 0.4, 0.5, 0.6, 0.8), each = 3) 
-  target_power = rep(c(0.7, 0.8, 0.9), 5)
+  target_power = rep(c(0.7, 0.8, 0.9), each = 84)
+  d_actual = rep(rep(seq(0, 1, 0.05), 4), 3)
+  d_forpower = rep(rep(seq(0.2, 0.8, 0.2), 21), 3) 
   
   ########################## PARALELLELIZE ##########################
   dt <- mclapply(1:length(d_actual), 
-                 function(i) run_fixed(d_actual[i], target_power[i]),
+                 function(i) run_fixed(d_actual[i], 
+                                       d_forpower[i],
+                                       target_power[i]),
                  mc.cores = 2)
   print("The fixed sampling procedure has finished running!")
   
@@ -171,7 +175,7 @@ run_all_procedures = function(nsims){
   
   #find_alpha_weak(0.05, 3, .025) #returns .28
   
-  run_isp = function(d_actual, target_power) {
+  run_isp = function(d_actual, d_forpower, target_power) {
     
     ########################## ISP ##########################
     
@@ -181,12 +185,13 @@ run_all_procedures = function(nsims){
         target_power, 
         stat_procedure_name = "2t", 
         effect_size = d_forpower, 
+        #effect_size = d_actual,
         max_n_segments, 
         alpha_total, 
         alpha_strong))/2
     
     # Run all data in batches of minN
-    set.seed(1234*(d_forpower*target_power))
+    set.seed(1234*(d_actual*target_power))
     l = lapply(1:max_n_segments, 
                function(i){generate_data(nsims = nsims, 
                                          n = ns, 
@@ -227,6 +232,7 @@ run_all_procedures = function(nsims){
         n = ns,
         n_cumulative = n * segment,
         d_forpower = d_forpower, 
+        #d_forpower = d_actual,
         d_actual = d_actual, 
         power = target_power,
         sdpooled = sqrt((sd1^2 +sd2^2)/2),
@@ -254,12 +260,14 @@ run_all_procedures = function(nsims){
   ########################## SET PARAMETERS ##########################
   alpha_strong = 0.025
   alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculate alpha_weak for ISP
-  d_actual = rep(c(0.2, 0.4, 0.5, 0.6, 0.8), each =3) 
-  target_power = rep(c(0.7, 0.8, 0.9), 5)
+  #d_actual = rep(seq(0, 1, 0.05), 4) 
+  #d_forpower = rep(seq(0.2, 0.8, 0.2), 21) #powered to .8 to detect this effect size
   
   ########################## PARALELLELIZE ##########################
   dt <- mclapply(1:length(d_actual), 
-                 function(i) run_isp(d_actual[i], target_power[i]),
+                 function(i) run_isp(d_actual[i], 
+                                     d_forpower[i],
+                                     target_power[i]),
                  mc.cores = 2)
   print("The Independent Segments Procedure has finished running!")
   
@@ -274,16 +282,15 @@ run_all_procedures = function(nsims){
 ########################## RUN ALL PROCEDURES ##########################
 
 system.time(dt <- mclapply(1, function(i) run_all_procedures(nsims = 10000),
-                           mc.cores = 2)) #10,000 sims takes about
-#started running at 
+                           mc.cores = 2)) #10,000 sims take 45 minutes to run
+
 system("say All your procedures have finished running!")
 df = data.table::rbindlist(dt)
 
-########################## CREATE FINAL DATA-FRAME ##########################
-write.csv(df, "supplemental/simulations/data_supplemental.csv", row.names = F)
+#################### CREATE FINAL DATA-FRAME #####################
+write.csv(df, file=gzfile("supplemental/simulations/data_supplemental.csv.gz"), row.names = F) #write in zip to compress
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-############################################################################
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
