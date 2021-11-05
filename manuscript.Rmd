@@ -471,7 +471,7 @@ This manuscript was created using `r cite_r("r-refs.bib")`.
 ## Table 1
 ## *Commonalities and Differences between Three Sequential Hypothesis Testing Procedures*
 
-|  | Group-Sequential Design | Independent Segments Procedure | Sequential Bayes Factor Design |
+|  | Group-Sequential Designs | Independent Segments Procedure | Sequential Bayes Factor Design |
 | ------------- | ------------- | ------------- | ------------- |
 | **Aim** | Efficiently reject $H_0$ in favor of an alternative $H_1$ | Efficiently reject $H_0$ in favor of an alternative $H_1$ | Efficiently examine the evidence for $H_0$ relative to an alternative $H_1$, or vice versa |
 | **Nature of data**  | Cumulative  | Independent  | Cumulative  | Cumulative |
