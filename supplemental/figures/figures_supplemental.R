@@ -10,7 +10,7 @@ library(gridExtra)
 
 # Read data ---------------------------------------------------------------
 zipped_df = gzfile("supplemental/simulations/data_supplemental.csv.gz", "rt")
-df = read.csv(zipped_df, header = T) 
+df = read.csv(zipped_df, header = T) #takes a minute
 
 df_summary = df %>% 
   group_by(d_forpower, power, proc, d_actual) %>%  
@@ -23,7 +23,6 @@ df_summary = df %>%
 # Figure S1 ----------------------------------------------------------------
 # Obtained Effect Sizes using Fixed versus Independent Segments Hypothesis Testing
 # Expected effect sizes only (i.e., d powered for == actual d)
-# Google Drive > Independent Segments Procedure > Simulations > Figure 1 (Obtained Effect Sizes using Fixed versus Independent Segments Hypothesis Testing). Code in 'Figures.R'
 
 df_expected <- df %>% 
   filter(d_forpower == d_actual)
@@ -83,8 +82,6 @@ dev.off()
 # Figure S2 ----------------------------------------------------------------
 # Bias in Obtained Effect Sizes using Fixed versus Independent Segments Hypothesis Testing
 # Includes unexpected effect sizes
-# Focus is only on power = 0.8
-# Add Google Drive > Independent Segments Procedure > Simulations > Figure 4 (Bias in Obtained Effect Sizes using Fixed versus Independent Segments Hypothesis Testing). Code in 'Figures.Rmd'
 
 bplot = function(f) {
   ggplot(data = f, 
@@ -142,13 +139,13 @@ dev.off()
 
 # Figure S3 ---------------------------------------------------------------
 # Bias-Variance in Obtained Effect Sizes using Fixed versus Independent Segments Hypothesis Testing
-# Add Google Drive > Independent Segments Procedure > Simulations > Figure 7 (Bias-Variance in Obtained Effect Sizes using Fixed versus Independent Segments Hypothesis Testing).  Code in 'Figures.Rmd'
 
 proc.label = c("Fixed Sample Hypothesis Test", "Independent Segments Procedure")
 names(proc.label) = c("Fixed", "ISP")
 plt = function(f) {
   D = mean(f$d_forpower) #get separate plot for each d powered for
-  t = paste0(sprintf("H\u00b2: \u03b4 = %0.1f, 1 - *\u03b2* = ", D), mean(f$power))
+  #t = paste0(sprintf("H\u00b2: \u03b4 = %0.1f, 1 - *\u03b2* = ", D), mean(f$power))
+  t = sprintf("H\u00b2: \u03b4 = %0.1f, 1 - *\u03b2* = %0.1f", D, mean(f$power))
   
   ggplot(data = f, mapping = aes(x = d_actual, y = bias2)) +
     geom_smooth(method = "gam", formula = y ~ s(x, k = 12), se = F, color = "black") +
@@ -205,8 +202,137 @@ grid.arrange(
     )
   )
 dev.off()
+
 # Figure S4 ---------------------------------------------------------------
 # Exaggeration of Significant Results using Fixed versus Independent Segments Hypothesis Testing
-# Add Google Drive > Independent Segments Procedure > Simulations > Figure 6 (Estimated Cohen's d using Fixed versus Independent Segments Hypothesis Testing).  Code in 'Figures Appendix.Rmd'
 
+df_significant <- df_expected %>% 
+  filter(
+    decision == "reject.null" & 
+      d_actual %in% c(0.2, 0.4, 0.6, 0.8)
+  ) %>% 
+  mutate(
+    dL = 0.5*d_actual,
+    dH = 1.5*d_actual
+    ) %>% #was the estimate within +-50% of the true d?
+  mutate(
+    Capture = as.factor((ifelse(ES > dL & ES < dH, 1, 0)))
+    ) %>% 
+  group_by(d_actual, power, proc) %>% 
+  slice_sample(n = 5000) %>%  #randomly sample 5000 significant results 
+  arrange(d_actual, power, proc, ES) %>% 
+  mutate(id = 1:5000) #24 different combinations of power (3) and d (4) and proc (2)
 
+colorset = c("0" = "red", "1" = "black")
+proc.label = c("Fixed Sample Hypothesis Test", "Independent Segments Procedure")
+names(proc.label) = c("Fixed", "ISP")
+
+plt = function(f) {
+  D = mean(f$d_actual) #get separate plot for each combo of power and d
+  t = sprintf("\u03b4 = %0.1f, 1 - *\u03b2* = %0.1f", D, mean(f$power))
+  
+  f = f %>% 
+    mutate(ER = ifelse(ES / d_actual >= 1.5, 1, 0))
+  
+  ER.fixed = f %>% 
+    filter(proc == "Fixed") %>% 
+    summarize(mean = mean(ER)) %>% 
+    pull()
+  
+  ER.ISP = f %>% 
+    filter(proc == "ISP") %>% 
+    summarize(mean = mean(ER)) %>% 
+    pull()
+  
+  dat_text = data.frame(
+    label = c(paste0("P(d > 1.5\u03b4) \n= ", round(ER.fixed, 2)),
+              paste0("P(d > 1.5\u03b4) \n= ", round(ER.ISP, 2))),
+    proc = c("Fixed", "ISP"))
+  
+  ggplot(f, aes(x = id, y = ES)) +
+    geom_hline(yintercept = c(0.5*D, D, 1.5*D, 2*D, 2.5*D, 3*D), 
+               linetype = "dashed", 
+               color = "gray") +
+    geom_point(aes(color = Capture), size = 0.2) +
+    coord_flip() +
+    scale_color_manual(values = colorset) +
+    labs(title = t) +
+    facet_wrap(vars(proc), labeller = labeller(proc = proc.label)) +
+    geom_text(
+      data = dat_text,
+      mapping = aes(x = 4250, y = 0.2*D, label = label), 
+      hjust = 0, 
+      size = 4, 
+      fontface = "bold", 
+      col = "red"
+      ) +
+    annotate(
+      "text", 
+      x = 1250, 
+      y = 1.5*D, 
+      label = "d > 1.5\u03b4", 
+      hjust = 0, 
+      col = "red", 
+      size = 3,
+      angle = 50, 
+      fontface = "bold"
+      ) +
+    annotate(
+      "text", 
+      x = 1250, 
+      y = 2*D, 
+      label = "d > 2\u03b4", 
+      hjust = 0, 
+      col = "red", 
+      size = 3,
+      angle = 50, 
+      fontface = "bold"
+      ) +
+    annotate(
+      "text", 
+      x = 1250, 
+      y = 2.5*D, 
+      label = "d > 2.5\u03b4", 
+      hjust = 0, 
+      col = "red", 
+      size = 3,
+      angle = 50, 
+      fontface = "bold"
+      ) +
+    theme_classic() +
+    theme(
+      axis.title = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      legend.position = "none",
+      strip.text = element_text(size = 10, face = "bold"), #proc.label
+      plot.title = ggtext::element_markdown(size = 12, hjust = 0.5, face = "bold")
+      ) +
+    scale_y_continuous(breaks = c(0.5*D, D, 1.5*D, 2*D, 2.5*D, 3*D),
+                       limits = c(0.2*D, 3.5*D)
+                       #limits = c(min(f$ES, max(f$ES)))
+                       )
+}
+
+p = lapply(split(df_significant, list(df_significant$power, df_significant$d_actual), 
+    drop = TRUE), plt)
+
+quartz(type = "pdf", file = "supplemental/figures/figureS4.pdf", height = 8, width=15)
+grid.arrange(
+  grobs = p, 
+  ncol = 3, 
+  top = textGrob(
+    "Exaggeration of Significant Results using Fixed versus Independent Segments Hypothesis Testing", 
+    gp = gpar(fontsize = 12)
+    ),
+  bottom = textGrob(
+    "Observed Cohen's d", 
+    gp = gpar(fontsize = 12)
+    ),
+  left = textGrob(
+    "Significant Results Sorted by Observed Cohen's d",
+    gp=gpar(fontsize = 12), 
+    rot = 90, 
+    just = "center")
+  )
+dev.off()
