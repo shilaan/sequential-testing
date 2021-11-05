@@ -1,4 +1,3 @@
-
 # Set up ------------------------------------------------------------------
 library(beepr)
 library(ggplot2)
@@ -34,13 +33,11 @@ facet.label = c("Fixed Hypothesis and Equivalence Test",
 names(facet.label) = c(1, 2, 3, 4, 5)
 
 # TO DO -------------------------------------------------------------------
-# Check why citations don't render correctly (perhaps add re-add those papers to Zotero?)
 # Change group-sequential designs figures (binding futility bounds + different rates for OBF changed the N). 
 # Change this^ in manuscript too
 
 # MAYBE -------------------------------------------------------------------
 # Run meta-analysis and include meta-analytic effect size figure 
-# Change subscript in the Bayes plots (fig 2a and 2b) (don't remember what I meant by this.. maybe +0?)
 # Change superscript in figures S2 and S3
 
 #=============================================================================#
@@ -380,7 +377,7 @@ dev.off()
 #============================================================================#
 # Adapted from https://www.shinyapps.org/apps/RGraphCompendium/index.php#prior-and-posterior
 # Big thank you to Eric-Jan Wagenmakers & Quentin Gronau for maintaining this site!
-# I took the code from the side above and recoded it from base R to ggplot
+# I took the code from the site above and recoded it from base R to ggplot
 
 .likelihoodShiftedT <- function(par, data) {
   -sum(log(dt((data - par[1])/par[2], par[3])/par[2]))
@@ -490,6 +487,10 @@ dev.off()
   xlim <- c(min(CIlow, range(xticks)[1]), max(range(xticks)[2], CIhigh))
   
   ##ggplot 
+  
+  label1 <- sprintf("BF[1] == '%0.2f'", round(BF10, 2))
+  label2 <- sprintf("BF[0] == '%0.2f'", round(BF01, 2))
+
   ggplot(mapping = aes(x = seq(xlim[1], xlim[2], length.out = 1000), 
                        y = posteriorLine)) +
     geom_line(size = 1) +
@@ -508,10 +509,10 @@ dev.off()
          y = "Density") +
     theme(text = element_text(size = 25),
           axis.ticks.length = unit(.45, "cm")) +
-    annotate("text", x = xticks[2], y = ylim[2] - 0.3, size = 6,
-             label = paste0("BF0+ = ", format(round(BF01, 2), nsmall = 2))) +
-    annotate("text", x = xticks[2], y = ylim[2], size = 6,
-             label = paste0("BF+0 = ", format(round(BF10, 2), nsmall = 2))) +
+    annotate("text", x = xticks[2], y=ylim[2] - 0.3, size = 6,
+             label=label1, parse = TRUE) +
+    annotate("text", x = xticks[2], y=ylim[2], size = 6,
+             label=label2, parse = TRUE) +
     geom_line(mapping = aes(x = c(xticks[length(xticks) - 2],
                                   xticks[length(xticks) - 2] + 0.4),
                             y = c(ylim[2] - 0.3, ylim[2] - 0.3)),
