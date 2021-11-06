@@ -1,15 +1,12 @@
 # Set up ------------------------------------------------------------------
-library(beepr)
 library(ggplot2)
 library(tidyverse)
 library(ggtext)
 library(grid)
 library(papaja)
 library(gridExtra)
-library(metafor) #For an overview and introduction to the package please type: help(metafor).
 library(rpact)
 library(BayesFactor)
-library(metafor)
 
 # Read data ---------------------------------------------------------------
 df <- read.csv("simulations/data.csv")
@@ -39,6 +36,9 @@ names(facet.label) <- c(1, 2, 3, 4, 5)
 # Change Fig 3B according to the changes in 1AB
 # Add equivalence test to Fig 3B
 # Update Notes for figures
+# Put figures S1-S4 in the appendix
+# Write cover letter (note open data + materials badges)
+# Write non-technical abstract
 
 # MAYBE -------------------------------------------------------------------
 # Fix p-values in Fig 1AB 
@@ -359,7 +359,8 @@ p3 <- d.plot(
 
 tiff(file="figures/figure1a.tiff",width=2500,height=800, units = "px", res = 300)
 grid.arrange(p1, p2, p3, nrow = 1, 
-             left = textGrob("Density under H0: \u03b4 = 0", rot = 90, hjust = 0.57,
+             left = textGrob("Density under H0: \u03b4 = 0", 
+                             rot = 90, hjust = 0.57,
                              gp = gpar(fontsize = 10)))
 dev.off()
 
@@ -1162,7 +1163,8 @@ ggplot(data = df_summary,
   theme(legend.position = "none") +
   scale_x_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
                      limits = c(-0.2, 1)) +
-  labs(x = "True Effect Size (Cohen's d)", y = "Mean Estimated Effect Size - True Effect Size")
+  labs(x = "True Effect Size (Cohen's d)", 
+       y = "Mean Estimated Effect Size - True Effect Size")
 dev.off()
 
 # Median bias
@@ -1246,11 +1248,9 @@ ggplot(data = df_summary, mapping = aes(x = d_actual, y = bias.sq)) +
             size = 2.7)
 dev.off()
 
-#==============================================================================================#
-########################## FIGURE 9: MSE CONDITIONAL ON STOPPING TIME ########################## 
-#==============================================================================================#
-#Without MSPR
-#Take this figure out of paper?
+#===============================================================================#
+################ FIGURE 9: MSE CONDITIONAL ON STOPPING TIME #################### 
+#==============================================================================#
 
 sub = df %>% filter(proc != "Fixed" & d_forpower == d_actual) %>% 
   group_by(proc, facet, segment, d_actual) %>% 
@@ -1282,97 +1282,3 @@ ggplot(data = sub, mapping = aes(x = as.factor(segment), y = mse)) +
   scale_x_discrete(breaks = c(1, 2, 3, 4),
                    labels = c(1, 2, 3, "Overall"))
 dev.off()
-
-#==========================================================================================#
-########################## FIGUREXI: MEDIAN EFFECT SIZE ESTIIMATE ########################## 
-#==========================================================================================#
-med = df %>% 
-  group_by(proc, facet, d_actual) %>% 
-  summarize(medianES = median(ES_corrected)) 
-
-tiff(file="figures/figurexi.tiff",width=2000,height=1400, units = "px", res = 300)
-ggplot(data = med, mapping = aes(x = d_actual, y = medianES)) +
-  geom_point() +
-  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
-  theme_bw() +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey") +
-  theme(legend.position = "none", strip.background = element_rect(fill = "white")) +
-  labs(x = "True Effect Size (Cohen's d)", y = "Median Effect Size Estimate") +
-  scale_x_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
-                     limits = c(-0.2, 1)) 
-dev.off()
-
-#t4 = med %>% mutate(medianES = medianES %>% round(2)) %>%  
-#  pivot_wider(names_from = d_actual, names_prefix = "*d* = ", values_from = medianES)
-
-#========================================================================================#
-##################### FIGUREXIII: META-ANALYTIC EFFECT SIZE ESTIMATE ##################### 
-#========================================================================================#
-# Recode this later
-df = df %>% 
-  mutate(proc = fct_relevel(proc, "Fixed", "ISP", "asP", "asOF", "Bayes"),
-         n = ifelse(proc == "ISP", 25, n)) 
-
-# set.seed(42)
-# df = df %>% # meta-analysis on all 4 million observations exhausts vector memory
-#   group_by(proc, d_forpower, d_actual, power) %>% 
-#   slice_sample(n = 10000) # randomly select 400,000 obs (10,000 for each unique specification)
-
-# Compute sampling variance for meta-analysis
-models = df %>% split(list(.$proc, .$d_actual)) %>% 
-  map(~ 1/.$n + 1/.$n + .$ES^2/(4*.$n)) # compute sampling variance
-
-df = df %>% cbind(
-  models %>% 
-    tibble() %>% 
-    unnest(cols = c(.)) %>% 
-    rename(., "var" = .) %>% 
-    select(var))
-
-# Run meta-analysis
-meta = df %>% split(list(.$proc, .$d_actual)) %>% 
-  map(~ rma(yi = .$ES, vi = .$var, method = "FE")$b) #takes 5 mins to run
-beep()
-meta_analysis = data.frame(
-  proc = rep(c("Fixed Sample Hypothesis Test", 
-               "Independent Segments Procedure", 
-               "Group-Sequential (Pocock)",
-               "O'Brien-Fleming", 
-               "Sequential Bayes Factor"), 8),
-  d_actual = rep(c(-0.2, 0, 0.2, 0.4, 0.5, 0.6, 0.8, 1), each = 5),
-  meta.ES = meta %>% 
-    tibble() %>% 
-    unnest(cols = c(.)) %>% 
-    rename(., "meta" = .) %>% 
-    select(meta)) %>% 
-  mutate(proc = fct_relevel(
-    proc, "Fixed Sample Hypothesis Test", 
-    "Sequential Bayes Factor", 
-    "Group-Sequential (Pocock)", 
-    "O'Brien-Fleming", 
-    "Independent Segments Procedure"))
-
-tiff(file="figures/figurexiii.tiff",width=2900,height=1400, units = "px", res = 300)
-ggplot(data = meta_analysis, mapping = aes(x = d_actual, y = meta)) +
-  facet_wrap(vars(proc)) +
-  geom_abline(slope = 1, intercept = 0, color = "gray", linetype = "dashed") +
-  geom_point() +
-  theme_bw() +
-  labs(x = "True effect size (Cohen's d)", y = "Meta-analytic effect size estimate") +
-  scale_x_continuous(limits = c(-0.2, 1),
-                     breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1)) +
-  scale_y_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1)) +
-  theme(strip.background = element_rect(fill = "white"))
-dev.off()
-
-# For Bayes, I use the mean of the posterior distribution as the ES estimator, 
-# which shrinks the estimate in early terminations (which happen more often if the true ES is greater)
-# ----> Explains why the SBF meta-analytic effect size estimate underestimates the true effect as the true population effect size increases
-
-## Figure 10
-## *Meta-analytic Effect Size Estimates* 
-#\noindent
-#```{r, fig.heigth = 4.72, fig.width = 5}
-#knitr::include_graphics("Figure9.tiff", dpi = 300)
-#```
-#==============================================================================================#

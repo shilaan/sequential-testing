@@ -13,9 +13,10 @@ affiliation:
   - id            : "1"
     institution   : "Stanford University, Graduate School of Business"
     
-note: "\\clearpage"
+#note: "\\clearpage"
 
-author_note: 
+author_note: |
+  All simulation data, analysis code, and research materials have been made publicly available on the OSF and GitHub and can be accessed at [link] and [link]. 
 
 abstract: >
   Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. In this practical guide, I outline the commonalities and differences between three sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, and the Independent Segments Procedure. I illustrate how these procedures can be implemented in a group-wise manner. Using Monte Carlo simulations, I compare the performance of these procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing. 
@@ -42,16 +43,15 @@ output            : papaja::apa6_word
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set()
 library(papaja)
-library(beepr)
 library(tidyverse)
 library(ggplot2)
 library(grid)
+library(gridExtra)
 library(rpact)
 library(pracma)
 library(coda)
 library(BayesFactor)
 library(parallel)
-library(metafor)
 library(citr)
 library(TOSTER)
 library(BFDA)
@@ -376,6 +376,10 @@ For the simulations, I drew random samples from two normal distributions with co
 5. To estimate the uncorrected standardized effect size, calculate Cohen's *d*
 6. Repeat 10,000 times
 
+## Transparency and openness
+
+All data, analysis code, and research materials are available at [link]. The study was not preregistered. This manuscript was created using `r cite_r("r-refs.bib")`. 
+
 # Results
 
 ## Error rates
@@ -452,11 +456,6 @@ We have learned that scientific experiments can require substantial time, money,
 <!-- Also refer to MSE as reducible error  -->
 <!-- Emphasize that there is no bias correction available for the ISP, while there is for the SBF and GS.  -->
 <!-- (To make the point that the setup of the simulations is more practical and realistic than previous ones), Show some data on what scientists actually do, e.g., how often they look at their data when they use the Sequential Bayes Factor. Here's some examples on how SBFs are used in practice https://github.com/nicebread/BFDA/blob/master/BFDA_examples.md  -->
-
-\newpage
-
-## Acknowledgement
-This manuscript was created using `r cite_r("r-refs.bib")`.
 
 \newpage
 
