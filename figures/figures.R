@@ -33,13 +33,15 @@ facet.label <- c("Fixed Hypothesis and Equivalence Test",
 names(facet.label) <- c(1, 2, 3, 4, 5)
 
 # TO DO -------------------------------------------------------------------
-# Fix p-values in Fig 1AB 
-# Reconcile H1 H+ in the paper
-# Include both bias-correct and uncorrected estimates in the manuscript
+# Include both bias-corrected and uncorrected estimates in the manuscript
+# Write up final results
+# Wrap up discussion/practical recommendations
+# Change Fig 3B according to the changes in 1AB
+# Add equivalence test to Fig 3B
+# Update Notes for figures
 
 # MAYBE -------------------------------------------------------------------
-# Run meta-analysis and include meta-analytic effect size figure 
-# Change superscript in figures S2 and S3
+# Fix p-values in Fig 1AB 
 
 #=============================================================================#
 ########################## FIGURE 1A: POCOCK EXAMPLE ########################## 

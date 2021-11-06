@@ -143,7 +143,7 @@ The binding futility bounds for our example Pocock-like design are $\alpha_{0,1}
 
 Because the OBF-like procedure sets such a strict $\alpha$ threshold for the first look, a researcher employing the O'Brien-Fleming-like procedure will have relatively low power, and consequently a low probability of stopping for efficacy, in the first look. Thus, when a researcher uses the O'Brien Fleming-like procedure and wishes to be well-powered during the earlier looks, it is often recommended to have the first look take place later in the data collection process (rather than spacing the looks equally; Daniël Lakens, personal communication, December 19, 2020). For example, when $k_{max} = 3$, a researcher can decide to equally space their looks when employing a Pocock-like design (i.e., analyze the data after 33%,  67%, and 100% of the data are collected, respectively), while taking unequally spaced looks when employing an O'Brien-Fleming-like design (e.g., analyze the data after 50%, 75%, and 100% of the data are collected, respectively). 
 
-Because the use of group-sequential procedures allows for early stopping, it generally reduces the average sample size needed (with certain exceptions; e.g., when the true effect size is equal to or close to zero, the use of sequential procedures tends to increase the average sample size needed). For example, if a researcher wants to conduct a one-sided, two-sample *t* test ($H_0:~\delta$ = 0 against $H_+:~\delta > 0$) with 80% power to detect a Cohen's *d* (i.e., a standardized mean difference) of 0.5, a conventional Null Hypothesis Significance Test with an overall $\alpha$ of 5% would require `r n_fixed` participants per group. Using the Pocock-like GS design outlined above, the same study can be conducted with only `r n_p` participants per group per look. Using the O'Brien-Fleming like design outlined above, this same study can be conducted with `r n_of[1]` participants per group during the first look, and `r n_of[2]` participants per group during the last two looks. Below, I briefly outline the decision-theoretic procedure of GS designs.  
+Because the use of group-sequential procedures allows for early stopping, it generally reduces the average sample size needed (with certain exceptions; e.g., when the true effect size is equal to or close to zero, the use of sequential procedures tends to increase the average sample size needed). For example, if a researcher wants to conduct a one-sided, two-sample *t* test ($H_0:~\delta$ = 0 against $H_1:~\delta > 0$) with 80% power to detect a Cohen's *d* (i.e., a standardized mean difference) of 0.5, a conventional Null Hypothesis Significance Test with an overall $\alpha$ of 5% would require `r n_fixed` participants per group. Using the Pocock-like GS design outlined above, the same study can be conducted with only `r n_p` participants per group per look. Using the O'Brien-Fleming like design outlined above, this same study can be conducted with `r n_of[1]` participants per group during the first look, and `r n_of[2]` participants per group during the last two looks. Below, I briefly outline the decision-theoretic procedure of GS designs.  
 
 **Decision-theoretic procedure of GS designs.** 
   
@@ -165,13 +165,13 @@ Because the use of group-sequential procedures allows for early stopping, it gen
 ## *Sequential Bayes Factor* 
 @schonbrodt2017 propose an alternative approach to sequential hypothesis testing: the Sequential Bayes Factor (SBF). With the SBF procedure, decisions are made on the basis of interim Bayes Factors. The Bayes Factor is a measure of relative evidence for two competing hypotheses [e.g., the null and the alternative hypothesis; for an excellent introduction to Bayesian Hypothesis Testing, see @wagenmakers2018]. 
 
-The SBF procedure has several properties of interest. First, it is symmetric: it allows researchers to examine whether the obtained data is better predicted by, for example, $H_+$ than $H_0$, or vice versa. Second, it is highly flexible: it allows researchers to take as many looks at incoming data as desired [even after every study participant\; @schonbrodt2017]. Third, it does not allow type I and type II error rates to be defined a priori [although simulations can be run to choose an optimal design that controls expected error rates, @schonbrodt2018; @schonbrodt2017; @stefan2020]. Fourth, it allows (and requires) researchers to express their uncertainty about the expected effect size by means of a prior distribution.
+The SBF procedure has several properties of interest. First, it is symmetric: it allows researchers to examine whether the obtained data is better predicted by, for example, $H_1$ than $H_0$, or vice versa. Second, it is highly flexible: it allows researchers to take as many looks at incoming data as desired [even after every study participant\; @schonbrodt2017]. Third, it does not allow type I and type II error rates to be defined a priori [although simulations can be run to choose an optimal design that controls expected error rates, @schonbrodt2018; @schonbrodt2017; @stefan2020]. Fourth, it allows (and requires) researchers to express their uncertainty about the expected effect size by means of a prior distribution.
 
-Again, we consider the example of a researcher running a one-sided, two-sample *t* test between $H_0:~\delta$ = 0 and $H_+:~\delta > 0$. To follow the SBF procedure, the researcher needs to prespecify two things: (a) the prior distribution for the standardized effect size $\delta$ under $H_+$ and (b) the decision threshold _t_* for the Bayes Factor. Excellent guidance on these important decisions can be found in @schonbrodt2017. Ideally, a Bayes Factor Design Analysis or simulations can be run to choose an optimal design that controls expected error rates [@schonbrodt2018].
+Again, we consider the example of a researcher running a one-sided, two-sample *t* test between $H_0:~\delta$ = 0 and $H_1:~\delta > 0$. To follow the SBF procedure, the researcher needs to prespecify two things: (a) the prior distribution for the standardized effect size $\delta$ under $H_1$ and (b) the decision threshold _t_* for the Bayes Factor. Excellent guidance on these important decisions can be found in @schonbrodt2017. Ideally, a Bayes Factor Design Analysis or simulations can be run to choose an optimal design that controls expected error rates [@schonbrodt2018].
 
-To reflect the expectation of a "medium" effect size, a researcher can, for example, choose the default prior distribution [i.e., a Cauchy distribution with scale parameter *r* = $\sqrt2/2$\; @morey2011; @schnuerch2020; @schonbrodt2017]. Alternatively, a researcher can rely on an informed prior distribution that incorporates prior knowledge about the effect size, gathered from expert knowledge, previous work, or theoretical considerations [@stefan2020]. In addition, the researcher could (for example, on the basis of simulations) choose $BF_{+0}$ = 3 as a decision threshold [commonly referred to as "*moderate evidence*"\; @schonbrodt2017]. This decision threshold _t_* implies that the researcher is content to stop sampling once the data is 3 times more likely under $H_+$ than under $H_0$, or vice versa. Figure 2A (2B) provides a visual example of a situation in which the Bayes Factor indicates that the data is 3 times more likely under $H_+$ ($H_0$).
+To reflect the expectation of a "medium" effect size, a researcher can, for example, choose the default prior distribution [i.e., a Cauchy distribution with scale parameter *r* = $\sqrt2/2$\; @morey2011; @schnuerch2020; @schonbrodt2017]. Alternatively, a researcher can rely on an informed prior distribution that incorporates prior knowledge about the effect size, gathered from expert knowledge, previous work, or theoretical considerations [@stefan2020]. In addition, the researcher could (for example, on the basis of simulations) choose $BF_{10}$ = 3 as a decision threshold [commonly referred to as "*moderate evidence*"\; @schonbrodt2017]. This decision threshold _t_* implies that the researcher is content to stop sampling once the data is 3 times more likely under $H_1$ than under $H_0$, or vice versa. Figure 2A (2B) provides a visual example of a situation in which the Bayes Factor indicates that the data is 3 times more likely under $H_1$ ($H_0$).
 
-The Sequential Bayes Factor and the Group-Sequential Procedures address different questions, each interesting in their own right. Group-sequential procedures (as well as the traditional Null Hypothesis Significance Test and the Independent Segments Procedure described below) raise the question "*On the basis of a decision rule under which the long-run probability of rejecting a true null hypothesis will be no more than $\alpha$%, can the null hypothesis be rejected?*" The Sequential Bayes Factor procedure, on the other hand, considers "*On the basis of a prespecified threshold and desired error rates under the assumption of a specific $H_0$ and $H_+$, can we conclude that there is sufficient evidence for $H_0$ or $H_+$?*" 
+The Sequential Bayes Factor and the Group-Sequential Procedures address different questions, each interesting in their own right. Group-sequential procedures (as well as the traditional Null Hypothesis Significance Test and the Independent Segments Procedure described below) raise the question "*On the basis of a decision rule under which the long-run probability of rejecting a true null hypothesis will be no more than $\alpha$%, can the null hypothesis be rejected?*" The Sequential Bayes Factor procedure, on the other hand, considers "*On the basis of a prespecified threshold and desired error rates under the assumption of a specific $H_0$ and $H_1$, can we conclude that there is sufficient evidence for $H_0$ or $H_1$?*" 
 
 There are several possible ways to implement the SBF procedure [@schonbrodt2018]. An open-ended SBF design is one in which a researcher tests after each participant and stops data collection when sufficient evidence for either $H_1$ or $H_0$ has been gathered. Alternatively, a researcher can prespecify a maximum sample size and continue data collection until (a) sufficient evidence has been gathered or (b) the maximum sample size has been reached. In this paper, I focus on the latter procedure: a max-SBF design. Below, I briefly outline the decision-theoretic procedure of the max-SBF.
 
@@ -180,9 +180,9 @@ There are several possible ways to implement the SBF procedure [@schonbrodt2018]
   *
 1. Randomly sample $N_{\text{Bayes}}$ observations from the specified population(s) 
 2. Run the test(s) of interest (e.g., a one-sided default Bayes Factor two-sample *t* test)
-  a. if $BF_{+0} \ge t*$: decide to reject $H_0$ (support $H_+$) and end the experiment
-  b. if $BF_{+0} \le 1/t*$: decide to reject $H_+$ (support $H_0$) and end the experiment
-  c. if $1/t*~< BF_{+0} < t*$: collect additional observations and repeat step 2 on the cumulative data
+  a. if $BF_{10} \ge t*$: decide to reject $H_0$ (support $H_1$) and end the experiment
+  b. if $BF_{10} \le 1/t*$: decide to reject $H_1$ (support $H_0$) and end the experiment
+  c. if $1/t*~< BF_{10} < t*$: collect additional observations and repeat step 2 on the cumulative data
 3. Continue until the Bayes Factor crosses one of the thresholds, or until the maximum *N* has been reached  
   
   
@@ -206,7 +206,7 @@ In sum, the ISP applies only to those settings in which a researcher is comforta
 
   a. if $p \le \alpha_{strong}$: decide to reject $H_0$ and end the experiment 
   b. if $p > \alpha_{weak}$: decide not to reject $H_0$ and end the experiment
-  c. if $\alpha_{strong} < p \le \alpha_{weak}$: discard the data, collect a new batch of $N_{\text{ISP}} observations, and repeat step 2 on this independent batch of data
+  c. if $\alpha_{strong} < p \le \alpha_{weak}$: discard the data, collect a new batch of $N_{\text{ISP}}$ observations, and repeat step 2 on this independent batch of data
 
 4. For segment $k_{max}$ (if reached), repeat steps 1 and 2,
   a. if $p \le \alpha_{weak}$: decide to reject $H_0$ and end the experiment
@@ -260,7 +260,7 @@ Decision-theoretic error rates are evaluated by classifying test results as True
 
 1. For the fixed sample hypothesis test paired with an equivalence test, $\delta$ > 0 and the decision was made to reject the null hypothesis (*p* $\le \alpha$)
 2. For the Pocock and O'Brien-Fleming procedures, $\delta$ > 0 and the decision was made to reject the null hypothesis (*p* $\le \alpha_{1,k}$)
-3. For the SBF procedure, $\delta$ > 0 and the decision was made to reject the null hypothesis ($BF_{+0}~\ge$ _t_*)
+3. For the SBF procedure, $\delta$ > 0 and the decision was made to reject the null hypothesis ($BF_{10}~\ge$ _t_*)
 4. For the Independent Segments Procedure, $\delta$ > 0 and the decision was made to reject the null hypothesis (*p* $\le \alpha_{strong}$ in segments 1:$k_{max}-1$ or *p* $\le \alpha_{weak}$ in the final segment $k_{max}$)
 
 **False Positive. **
@@ -269,7 +269,7 @@ Decision-theoretic error rates are evaluated by classifying test results as True
 
 1. For the fixed-sample hypothesis test paired with an equivalence test, $\delta$ = 0 and the decision was made to reject the null hypothesis (*p* $\le \alpha$)
 2. For the Pocock and O'Brien-Fleming procedures, $\delta$ = 0 and the decision was made to reject the null hypothesis (*p* $\le \alpha_{1,k}$)
-3. For the SBF procedure, $\delta$ = 0 and the decision was made to reject the null hypothesis ($BF_{+0} \ge$ _t_*)
+3. For the SBF procedure, $\delta$ = 0 and the decision was made to reject the null hypothesis ($BF_{10} \ge$ _t_*)
 4. For the Independent Segments Procedure, $\delta$ = 0 and the decision was made to reject the null hypothesis (*p* $\le \alpha_{strong}$ in segments 1:$k_{max}-1$ or *p* $\le \alpha_{weak}$ in the final segment $k_{max}$)
 
 **True Negative. ** 
@@ -278,7 +278,7 @@ Decision-theoretic error rates are evaluated by classifying test results as True
 
 1. For the fixed-sample hypothesis test paired with an equivalence test, $\delta$ = 0 and the decision was made to conclude statistical equivalence [*p* $\le \alpha$ for both *p*-values of a Two One-Sided Tests [TOST] procedure\; @lakens2018]
 2. For the Pocock and O'Brien-Fleming procedures, $\delta$ = 0 and the decision was made to stop for futility (*p* $\ge \alpha_{0,k}$)
-3. For the SBF procedure, $\delta$ = 0 and the decision was made to support the null hypothesis ($BF_{0+} \ge$ _t_*)
+3. For the SBF procedure, $\delta$ = 0 and the decision was made to support the null hypothesis ($BF_{01} \ge$ _t_*)
 4. For the Independent Segments Procedure, $\delta$ = 0 and the decision was made to stop in an early segment (*p* $> \alpha_{weak}$)
 
 **False Negative. ** 
@@ -287,7 +287,7 @@ Decision-theoretic error rates are evaluated by classifying test results as True
 
 1. For the fixed-sample hypothesis test paired with an equivalence test, $\delta > 0$ and the decision was made to conclude statistical equivalence ($p_{\text{TOST}, 1:2}$ $\le \alpha$)
 2. For the Pocock and O'Brien-Fleming procedures, $\delta$ > 0 and the decision was made to stop for futility (*p* $\ge \alpha_{0,k}$)
-3. For the SBF procedure, $\delta$ > 0 and the decision was made to support the null hypothesis ($BF_{0+} \ge$ _t_*)
+3. For the SBF procedure, $\delta$ > 0 and the decision was made to support the null hypothesis ($BF_{01} \ge$ _t_*)
 4. For the Independent Segments Procedure, $\delta$ > 0 and the decision was made to stop in an early segment (*p* $> \alpha_{weak}$)
 
 **Inconclusive. **
@@ -296,7 +296,7 @@ Decision-theoretic error rates are evaluated by classifying test results as True
 
 1. For the fixed-sample hypothesis test paired with an equivalence test, the procedure failed to reject the null hypothesis or conclude statistical equivalence ($p_{\text{fixed}} > \alpha$ and $p_{\text{TOST},1:2} > \alpha$ )
 2. For the Pocock and O'Brien-Fleming procedures, $k_{max}$ was reached and ended in a failure to reject the null hypothesis ($p > \ \alpha_1$)
-3. For the SBF procedure, $k_{max}$ was reached and neither of the thresholds was met ($1/t*~< BF_{+0} < t*$)
+3. For the SBF procedure, $k_{max}$ was reached and neither of the thresholds was met ($1/t*~< BF_{10} < t*$)
 4. For the Independent Segments Procedure, $k_{max}$ was reached and ended in a failure to reject the null hypothesis (*p* > $\alpha_{weak}$)
   
   
@@ -314,9 +314,9 @@ For the independent segments procedure with $\alpha_{total}$ = .05, $\alpha_{str
 
 In addition, a $\beta$-spending function was used to set critical $\alpha_{0,k}$ levels (i.e., binding futility bounds). For our worked example, the adjusted $\alpha_{0,k}$ levels correspond to $\alpha_{0,1}$ = `r futility_p[1]` and $\alpha_{0,2}$ = `r futility_p[2]` at the first and second look for the Pocock-like design and $\alpha_{0,1}$ = `r futility_of[1]` and $\alpha_{0,2}$ = `r futility_of[2]` at the first and second look for the O'Brien-Fleming-like design. For the Pocock-like design, the required sample size $N_{\text{Pocock}}$ = `r n_p` per group per look; for the O'Brien-Fleming-like design, the required sample size $N_{\text{O'Brien-Fleming}}$ = `r n_of[1]` per group for the first look, and `r n_of[2]` per group for the last two looks.  
 
-The parameters for the Sequential Bayes Factor procedure were chosen to allow for maximum comparability with the frequentist sequential procedures, which correspond to a one-tailed hypothesis test powered to detect a hypothesized population effect size of $\delta$ = 0.5 with $\alpha$ = .05 and $k_{max} = 3$ looks. To calculate the Bayes Factor, I used an informed prior (a normal distribution centered at the hypothesized effect size, $\delta = 0.5$). To incorporate information about the sidedness of the hypothesized effect, the prior distribution was truncated at $\delta = 0$ to include only positive values. Thus, like in the one-sided *t*-tests described above, we compare $H_0:~\delta = 0$ to $H_+:~\delta > 0$.  
+The parameters for the Sequential Bayes Factor procedure were chosen to allow for maximum comparability with the frequentist sequential procedures, which correspond to a one-tailed hypothesis test powered to detect a hypothesized population effect size of $\delta$ = 0.5 with $\alpha$ = .05 and $k_{max} = 3$ looks. To calculate the Bayes Factor, I used an informed prior (a normal distribution centered at the hypothesized effect size, $\delta = 0.5$). To incorporate information about the sidedness of the hypothesized effect, the prior distribution was truncated at $\delta = 0$ to include only positive values. Thus, like in the one-sided *t*-tests described above, we compare $H_0:~\delta = 0$ to $H_1:~\delta > 0$.  
 
-For the SBF procedure, I ran simulations to choose an optimal sample size (paired to the other procedures under study, with $k_{max}$ = 3 equally spaced looks) and Bayes Factor threshold, such that the overall error rate would approach that of the frequentist procedures (i.e., a false negative rate of 20% and a false positive rate of 5%). In the main paper, I report the results of a max-SBF procedure with the Bayes Factor threshold set to 3 for $H_+$ and 1/3 for $H_0$, the sample size set to $N_{\text{Bayes}}$ = 25 per group per look with $k_{max}$ = 3 looks, and a normal prior distribution centered at $\delta = 0.5$ with $\sigma^2 = 0.3$. In the supplemental materials at [link], results can be found for simulations that vary additional parameters for the max-SBF procedure. Of note, as discussed above, the Sequential Bayes Factor can be implemented much more flexibly (i.e., with as many looks as desired, without a maximum sample size). However, to make the sequential procedures as comparable as possible and to account for practical considerations that researchers may have, each procedure is each implemented with $k_{max}$ = 3 looks. 
+For the SBF procedure, I ran simulations to choose an optimal sample size (paired to the other procedures under study, with $k_{max}$ = 3 equally spaced looks) and Bayes Factor threshold, such that the overall error rate would approach that of the frequentist procedures (i.e., a false negative rate of 20% and a false positive rate of 5%). In the main paper, I report the results of a max-SBF procedure with the Bayes Factor threshold set to 3 for $H_1$ and 1/3 for $H_0$, the sample size set to $N_{\text{Bayes}}$ = 25 per group per look with $k_{max}$ = 3 looks, and a normal prior distribution centered at $\delta = 0.5$ with $\sigma^2 = 0.3$. In the supplemental materials at [link], results can be found for simulations that vary additional parameters for the max-SBF procedure. Of note, as discussed above, the Sequential Bayes Factor can be implemented much more flexibly (i.e., with as many looks as desired, without a maximum sample size). However, to make the sequential procedures as comparable as possible and to account for practical considerations that researchers may have, each procedure is each implemented with $k_{max}$ = 3 looks. 
 
 For the simulations, I drew random samples from two normal distributions with common variance $\sigma^2$ = 1 and means $\mu_1$ = 0 and $\mu_2 = \delta$ ($\delta$ = -0.2, 0, 0.2, 0.4, 0.5, 0.6, 0.8, 1). For each hypothesis testing procedure and true effect size $\delta$, 10,000 iterations were simulated (i.e., 5 procedures with 8 distinct true effect sizes and 10,000 replications each, leading to 400,000 observations in total). Below, I briefly outline each of the five decision-theoretic hypothesis testing procedures followed.  
 
@@ -352,8 +352,8 @@ For the simulations, I drew random samples from two normal distributions with co
 ## *Sequential-Bayes Factor*
 1. Randomly sample $N_{\text{Bayes}}$ observations from each of the two specified populations
 2. Run a one-sided, two-sample Bayes Factor *t* test on the mean difference between the two samples
-  a. if $BF_{+0} \ge 3$: decide to reject $H_0$ (support $H_1$) and end the experiment
-  b. if $BF_{+0} \le 1/3$: decide to reject $H_1$ (support $H_0$) and end the experiment
+  a. if $BF_{10} \ge 3$: decide to reject $H_0$ (support $H_1$) and end the experiment
+  b. if $BF_{10} \le 1/3$: decide to reject $H_1$ (support $H_0$) and end the experiment
   c. if $1/3 < BF_{10} < 3$: collect $N_{\text{Bayes}}$ additional observations and repeat step 2 on the cumulative data
 3. Continue until the Bayes Factor crosses one of the thresholds, or until the maximum *N* ($N_{\text{Bayes}} * k_{max}$) has been reached
 4. To estimate the uncorrected standardized effect size, calculate Cohen's *d*
@@ -380,27 +380,25 @@ For the simulations, I drew random samples from two normal distributions with co
 
 ## Error rates
 
-The error rates involved in the procedures under discussion are shown in Table 2A, Table 2B, and Figure 4. Table 2A describes the rates of True Negative, Inconclusive, and False Positive results when the true population effect size $\delta$ = 0; Table 2B describes the rates of True Positive, Inconclusive, and False Negative results when the true population effect size $\delta$ = 0.50. As can be read from the tables, the frequentist procedures all perform as expected: 4-5% of simulations rejected the null hypothesis when $\delta$ = 0 (i.e., a type I error rate of 4-5%; see the False Positive column Table 2A) and 80-81% of simulations rejected the null hypothesis when $\delta$ = 0.5 (i.e., a type II error rate of 19-20%; see the True Positive column of Table 2B).
+The error rates involved in the procedures under discussion are shown in Table 2A, Table 2B, and Figure 4. Table 2A describes the rates of True Negative, Inconclusive, and False Positive results when the true population effect size $\delta$ = 0; Table 2B describes the rates of True Positive, Inconclusive, and False Negative results when the true population effect size $\delta$ = 0.50. As can be read from the tables, the frequentist procedures all perform as expected: 5% of simulations rejected the null hypothesis when $\delta$ = 0 (i.e., a type I error rate of 5%; see the False Positive column Table 2A) and 80-82% of simulations rejected the null hypothesis when $\delta$ = 0.5 (i.e., a type II error rate of 18-20%; see the True Positive column of Table 2B).
 
-In addition, the results speak to the ability of using simulations to design an efficient Bayesian hypothesis testing procedure with attractive long-run properties. In this case, the False Positive rate of the SBF procedure is 4% and the True Positive rate of the SBF procedure is 78%. In addition, when a true population effect size exists, the SBF procedure consistently leads to a lower False Negative rate (and a higher rate of Inconclusive results) than its frequentist counterparts. This is in part due to the high(er) bar that the Bayes Factor requires to support the Null Hypothesis. In this case, the alternative hypothesis ($H_+:~\delta > 0$) has a within-model prior centered on zero (i.e., a Cauchy distribution with scale parameter *r* = $\sqrt2/2$). For this model to be dominated by the null hypothesis ($H_0:~\delta = 0$) when in fact a true population effect exists, it takes a large number of misleading samples in which the effect size is close to zero. Thus, a Bayesian will have a harder time concluding evidence in favor of the null (a False Negative) when a population effect exists.
-
-In line with previous findings [@schonbrodt2017; @schonbrodt2018; @stefan2020], I find that simulation-based approaches allow researchers to choose an optimal Sequential Bayes Factor design that controls expected error rates. It has previously been shown that the maximum-flexibility SBF procedure -- with appropriate choices for the decision threshold and the prior distribution of effect sizes under the alternative hypothesis -- can perform (at least) as well as other (sequential) procedures in terms of false-positive and false-negative error rates [@schonbrodt2017; @stefan2020]. Here, I show that this observation holds when we use a restricted version of the SBF with $k_{max}$ = 3 equally spaced looks.
+In addition, the results speak to the ability of using simulations to design an efficient Bayesian hypothesis testing procedure with attractive long-run properties. In this case, the False Positive rate of the SBF procedure is 6% and the True Positive rate of the SBF procedure is 84%. In line with previous findings [@schonbrodt2017; @schonbrodt2018; @stefan2020], I find that simulation-based approaches allow researchers to choose an optimal Sequential Bayes Factor design that controls expected error rates. It has previously been shown that the maximum-flexibility SBF procedure -- with appropriate choices for the decision threshold and the prior distribution of effect sizes under the alternative hypothesis -- can perform (at least) as well as other (sequential) procedures in terms of false-positive and false-negative error rates [@schonbrodt2017; @stefan2020]. Here, I show that this observation holds when we use a restricted version of the SBF with $k_{max}$ = 3 equally spaced looks.
 
 ## Efficiency
 
-Table 3 and Figure 5 show the average sample size required for the procedures under investigation, as a function of the true population effect size. As discussed, the fixed-sample procedure requires 51 participants per group. As can be read from Table 3 and Figure 5, the sequential procedures allow for a reduction in the average sample size required. Across the procedures, efficiency gains appear to be rather similar. When the true population effect size is relatively large, the O'Brien-Fleming approach is slightly less efficient than its counterparts. This can be explained by the relatively stringent $\alpha_1$ levels of the O'Brien-Fleming procedure in earlier segments (recall that, for the O'Brien-Fleming-like procedure, $\alpha_{1,1}$ = `r alpha_of[1]` and $\alpha_{1,2}$ = `r alpha_of[2]`). 
+Table 3 and Figure 5 show the average sample size required for the procedures under investigation, as a function of the true population effect size. As discussed, the fixed-sample procedure requires 51 participants per group. As can be read from Table 3 and Figure 5, the sequential procedures allow for a reduction in the average sample size required. Across the procedures, efficiency gains appear to be rather similar. When the true population effect size is relatively small, the max-SBF procedure is less efficient than its frequentist counterparts. When the true population effect size is relatively large, the O'Brien-Fleming approach is slightly less efficient than its counterparts. This can be explained by the relatively stringent $\alpha_1$ levels of the O'Brien-Fleming procedure in earlier segments (recall that, for the O'Brien-Fleming-like procedure, $\alpha_{1,1}$ = `r alpha_of[1]` and $\alpha_{1,2}$ = `r alpha_of[2]`). Across all true effect sizes, the Pocock-like procedure, with our chosen parameters, provides the greatest efficiency gains.  
 
 Our sequential procedures are performing as expected, providing an appealing increase in the efficiency of hypothesis tests. Next, we consider whether --- and if so, to what extent --- these efficiency gains come at a cost to our ability to estimate the true effect size.   
 
 ## Accuracy
 
-Figure 6 shows the empirical distribution of effect size estimates stemming from the five hypothesis testing procedures when the true effect size $\delta$ = 0.5. Effect size estimates stemming from the fixed sample hypothesis test are, as expected, normally distributed around the true effect size ($\delta$ = 0.5). As we can see, the distribution of effect size estimates stemming from the sequential procedures have a somewhat odd shape. This is to be expected [see, for example, @goodman2007]. The distribution of observed effects is more spread out for the sequential procedures because the experiments that stopped early have smaller sample sizes and higher variability in effect size estimates. In addition, we observe left-tailed peaks in the distribution of observed effect sizes. This is a consequence of those experiments that stopped early with a decision to support the null (i.e., False Negative results). 
+Figure 6 shows the empirical distribution of effect size estimates, along with the available bias-adjusted estimates, stemming from the five hypothesis testing procedures when the true effect size $\delta$ = 0.5. Effect size estimates stemming from the fixed sample hypothesis test are, as expected, normally distributed around the true effect size ($\delta$ = 0.5). As we can see, the distribution of effect size estimates stemming from the sequential procedures have a somewhat odd shape. This is to be expected [see, for example, @goodman2007]. The distribution of observed effects is more spread out for the sequential procedures because the experiments that stopped early have smaller sample sizes and higher variability in effect size estimates. In addition, we observe left-tailed peaks in the distribution of observed effect sizes. This is a consequence of those experiments that stopped early with a decision to support the null (i.e., False Negative results). 
 
-For the SBF, the median effect size estimate (*d* = 0.51) is very close to the true value ($\delta$ = 0.5). The GS procedures each have a slight bias in the median effect size estimate: *d* = 0.54 for the O'Brien-Fleming-like procedure and *d* = 0.57 for the Pocock-like procedure. The bias in the median effect size estimate of the ISP, however, is severe (*d* = 0.66; an exaggeration ratio of 1.33). The distribution of effect size estimates stemming from the ISP is bi-modal.
+For the group-sequential designs, we can see that the available median-unbiased estimators provide a great improvement over the naive (Cohen's *d*) estimator. For both the Pocock-like and the O'Brien-Fleming-like designs, the bias-adjusted effect size estimate is very close to the true population effect size: *d* = 0.49 compared to $\delta$ = 0.50. For the SBF procedure, we see that the using the mean of the posterior distribution (which shrinks the effect size estimate in earlier terminations) also provides a slight improvement in parameter estimation (by reducing the estimated effect size from *d* = 0.57 to *d* = 0.55).  The bias in the median effect size estimate of the ISP, however, is severe (*d* = 0.66; an exaggeration ratio of 1.33). This biased estimate remains uncorrected due to the absence of a bias-adjusted estimator accompanying the ISP. A we can see, the distribution of effect size estimates stemming from the ISP is bimodal.
 
-To make sense of this result, we revisit Figure 3B. In the first and second segment of the ISP, the critical effect size (i.e., the effect size that needs to be observed to reject the null hypothesis) is *d* = 0.57. An effect $d \ge$ 0.57 leads to an early stop with a decision to reject the null hypothesis; an effect $d \le$ 0.16 leads to an early stop with a decision not to reject the null hypothesis. An observed effect size 0.16 $\le$ *d* < 0.57 is considered inconclusive, after which the data is discarded and a new batch of observations is collected. As a result, *effect sizes closest to the true population effect size are discarded*. 
+To make sense of this result, we revisit Figure 3B. In the first and second segment of the ISP, the critical effect size (i.e., the effect size that needs to be observed to reject the null hypothesis) is *d* = 0.57. An effect $d \ge$ 0.57 leads to an early stop with a decision to reject the null hypothesis; an effect $d \le$ 0.16 leads to an early stop with a decision not to reject the null hypothesis. An observed effect size 0.16 $\le$ *d* < 0.57 is considered inconclusive, after which the data is discarded and a new batch of observations is collected. As a result, *effect sizes closest to the true population effect size are discarded*.  
 
-In the supplemental files, readers can find that this observation is not merely idiosyncratic to the test chosen (a two-sample *t* test with $\alpha$ = .05 and $\beta = .20$ for a hypothesized population effect size $\delta$ = 0.5). In contrast, across dozens of different test specifications, effect size estimates stemming from the ISP are consistently bi-modal and systematically exclude the true population effect size from being observed. 
+In figures S1-S4 in the supplemental files, readers can find that this observation is not merely idiosyncratic to the test chosen (a two-sample *t* test with $\alpha$ = .05 and $\beta = .20$ for a hypothesized population effect size $\delta$ = 0.5). In contrast, across dozens of different test specifications, effect size estimates stemming from the ISP are consistently bimodal and systematically exclude the true population effect size from being observed. 
 
 It is enlightening to consider that the Sequential Bayes Factor and Group-Sequential procedures are similarly biased in earlier segments. Early stopping acts as a filter that weeds out moderately sized effects: the only effect sizes that are maintained are the ones that are relatively small or in the wrong direction (e.g., when stopping for futility); or the ones that are really large (e.g., when stopping for efficacy). However, due to the cumulative nature of data collection and analysis, the bias inherent in early terminations tends to be compensated for by studies that terminate at later stages [@goodman2007; @fan2004; @schonbrodt2017]. As more observations are collected, the variability in effect size estimates decreases. Unfortunately, this is not the case for the Independent Segments Procedure. 
 
@@ -447,14 +445,12 @@ We have learned that scientific experiments can require substantial time, money,
 <!-- # To add -->
 
 <!-- Add in discussion/limitation section: We do not discuss adaptive designs, which extend GS designs and allow for even more flexibility while controlling error rates.  -->
+<!-- List recommendations: for OBF, set unequally spaced looks. For SBF, run simulations to choose an optimal sample size, decision threshold, and prior distribution. -->
 <!-- Discuss the power of the individual segments. Practical advice (can lead to guidance on choosing alpha strong; make sure that the alpha strong you set does not exclude the effect size you are interested in. Write reveal.effectsize function): You have to make sure that the individual segments are each powered to at least 50 percent to detect the hypothesized effect size: otherwise, the critical effect size will be higher than the hypothesized effect size, and you will thus systematically discard the effect sizes that you intended to detect! Show that with the example used, the first two independent segments are powered to ~30%. In all but the last segment, the critical effect size (the effect size you need to observe to claim significance) is a factor larger than the actual population effect that you powered your test for. It is thus impossible to get an unbiased estimate out of anything but the last segment.  When you obtain an effect size close to the true effect, the ISP procedure forces you to continue to the last segment, and *throw out that data*. (You can even graph this exaggeration ratio: create a table that shows the exact critical effect size for all possible combinations, and then you can just read off that plot that you're setting yourself up for overestimation). -->
 <!-- Discuss conditional bias (bias in effect size estimates conditional on stopping early) and unconditional bias (bias in effect size estimates across all studies). All other procedures have low unconditional bias, when you take the late termination studies into account, because they do cumulative analyses — the late termination studies are able to compensate for the bias in the early stage terminations. However, because the independent segments procedure is independent, each individual segment is biased and this is never accounted or compensated for. Thus, the ISP is unique among sequential procedures in that it not only has strong conditional bias (like most sequential procedures): it also has strong unconditional bias. [In this paper, I focused on two properties: conditional bias (bias in effect size estimates conditional on stopping early) and unconditional bias (bias in effect size estimates across all studies). I show that the independent segments procedure is unique among sequential procedures in that it not only has strong conditional bias (like all sequential procedures); it also has strong unconditional bias.] Emphasize that this is also what we see in Figure 3B: we only reject when d > 0.57. (This is not the case for, e.g., Pocock)   -->
 <!-- In the language of decision theory, the ISP is inadmissible: its total squared error risk exceeds that of other hypothesis testing procedures no matter what the true effect size may be.  -->
-<!-- Change writing on Bayes True Negative. Because I switched to an oracle prior setup, true negative rates actually look great -->
 <!-- Also refer to MSE as reducible error  -->
-<!-- Maybe add the figure of bimodality for all ISP parameters? Look through previous commits for this. -->
-<!-- Emphasize that there is no bias correction available for the ISP, while there is for the SBF and GS. Also emphasize that the ISP is the only procedure that is *not* median unbiased. Check if Lakens' comment makes this point? -->
-<!-- Incorporate points from three new Psych Methods papers (Lakens, Sneurch/Erdfelder, Ulrich/Miller) -->
+<!-- Emphasize that there is no bias correction available for the ISP, while there is for the SBF and GS.  -->
 <!-- (To make the point that the setup of the simulations is more practical and realistic than previous ones), Show some data on what scientists actually do, e.g., how often they look at their data when they use the Sequential Bayes Factor. Here's some examples on how SBFs are used in practice https://github.com/nicebread/BFDA/blob/master/BFDA_examples.md  -->
 
 \newpage
@@ -547,7 +543,7 @@ knitr::kable(t1,
 ## Table 3
 ## *Average Sample Size Required*
 
-```{r include = F}
+```{r, echo = FALSE}
 E_n = df %>% 
   group_by(name, d_actual) %>% 
   summarize(E_n = mean(n_cumulative)) %>% 
@@ -555,11 +551,11 @@ E_n = df %>%
 
 t3 = E_n %>% mutate(E_n = E_n %>% round()) %>% 
   pivot_wider(names_from = d_actual, names_prefix = "*d* = ", values_from = E_n) 
-```
 
-```{r, echo = FALSE}
 knitr::kable(t3)
 ```
+
+*Note.* 
 
 \newpage
 
@@ -613,7 +609,7 @@ knitr::include_graphics("figures/figure1b.tiff", dpi = 1200)
 knitr::include_graphics("figures/figure2a.tiff", dpi = 1200)
 ```
 
-*Note.* $BF_{+0}$ = 3 indicates that the alternative hypothesis ($H_+:~\delta > 0$) performs three times better at predicting the observed data than the null hypothesis ($H_0:~\delta = 0$). Figure based on Jeffreys' Amazing Statistics Program (JASP), adapted from Wagenmakers & Gronau [-@wagenmakers]
+*Note.* $BF_{10}$ = 3 indicates that the alternative hypothesis ($H_1:~\delta > 0$) performs three times better at predicting the observed data than the null hypothesis ($H_0:~\delta = 0$). Figure based on Jeffreys' Amazing Statistics Program (JASP), adapted from Wagenmakers & Gronau [-@wagenmakers]
 
 \newpage
 
@@ -624,7 +620,7 @@ knitr::include_graphics("figures/figure2a.tiff", dpi = 1200)
 knitr::include_graphics("figures/figure2b.tiff", dpi = 1200)
 ```
 
-*Note.* $BF_{0+}$ = 3 indicates that the null hypothesis ($H_0:~\delta = 0$) performs three times better at predicting the observed data than the  alternative hypothesis ($H_+:~\delta > 0$). Figure based on JASP, adapted from Wagenmakers & Gronau [-@wagenmakers]
+*Note.* $BF_{01}$ = 3 indicates that the null hypothesis ($H_0:~\delta = 0$) performs three times better at predicting the observed data than the  alternative hypothesis ($H_1:~\delta > 0$). Figure based on JASP, adapted from Wagenmakers & Gronau [-@wagenmakers]
 
 \newpage
 

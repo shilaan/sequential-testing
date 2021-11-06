@@ -7,7 +7,6 @@ library(ggtext)
 library(grid)
 library(gridExtra)
 
-
 # Read data ---------------------------------------------------------------
 zipped_df = gzfile("supplemental/simulations/data_supplemental.csv.gz", "rt")
 df = read.csv(zipped_df, header = T) #takes a minute
@@ -101,7 +100,7 @@ bplot = function(f) {
                        labels = c(round(-max(abs(f$bias)), 2), 0, round(max(abs(f$bias)), 2)),
                        limits = c(-max(abs(f$bias)), max(abs(f$bias)))) +
     scale_linetype_manual(values=c("dashed", "solid")) + 
-    labs(title = paste0("H\u00b2: \u03B4 = ", 
+    labs(title = paste0("H<sub>1</sub>: \u03B4 = ", 
                         mean(f$d_forpower), 
                         ", 1 - *\u03b2* = ", 
                         mean(f$power))) +
@@ -145,7 +144,7 @@ names(proc.label) = c("Fixed", "ISP")
 plt = function(f) {
   D = mean(f$d_forpower) #get separate plot for each d powered for
   #t = paste0(sprintf("H\u00b2: \u03b4 = %0.1f, 1 - *\u03b2* = ", D), mean(f$power))
-  t = sprintf("H\u00b2: \u03b4 = %0.1f, 1 - *\u03b2* = %0.1f", D, mean(f$power))
+  t = sprintf("H<sub>1</sub>: \u03b4 = %0.1f, 1 - *\u03b2* = %0.1f", D, mean(f$power))
   
   ggplot(data = f, mapping = aes(x = d_actual, y = bias2)) +
     geom_smooth(method = "gam", formula = y ~ s(x, k = 12), se = F, color = "black") +
