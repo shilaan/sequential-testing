@@ -12,9 +12,9 @@ library(BayesFactor)
 library(metafor)
 
 # Read data ---------------------------------------------------------------
-df = read.csv("simulations/data.csv")
+df <- read.csv("simulations/data.csv")
 
-df = df %>% 
+df <- df %>% 
   mutate(
     proc = fct_relevel(proc, "Fixed", after = 0),
     facet = case_when(
@@ -25,16 +25,17 @@ df = df %>%
       proc == "asOF"~ 5)
   )
 
-facet.label = c("Fixed Hypothesis and Equivalence Test", 
+facet.label <- c("Fixed Hypothesis and Equivalence Test", 
                 "Sequential Bayes Factor", 
                 "Independent Segments Procedure", 
                 "Pocock-like GS design",
                 "O'Brien-Fleming-like GS design")
-names(facet.label) = c(1, 2, 3, 4, 5)
+names(facet.label) <- c(1, 2, 3, 4, 5)
 
 # TO DO -------------------------------------------------------------------
-# Change group-sequential designs figures (binding futility bounds + different rates for OBF changed the N). 
-# Change this^ in manuscript too
+# Fix p-values in Fig 1AB 
+# Reconcile H1 H+ in the paper
+# Include both bias-correct and uncorrected estimates in the manuscript
 
 # MAYBE -------------------------------------------------------------------
 # Run meta-analysis and include meta-analytic effect size figure 
@@ -44,193 +45,318 @@ names(facet.label) = c(1, 2, 3, 4, 5)
 ########################## FIGURE 1A: POCOCK EXAMPLE ########################## 
 #=============================================================================#
 
-alpha_gs = function(proc, return = "n") {
-  bs = ifelse(proc == "asOF", "bsOF", "bsP")
+gs <- function(proc, return = "n") {
+  bs <- ifelse(proc == "asOF", "bsOF", "bsP")
+  if(proc == "asOF") {rates = c(0.50, 0.75, 1)} else{rates = c(1/3, 2/3, 1)} #specify information rates for OBF vs Pocock
+  
   
   # Specify the design
-  design = getDesignGroupSequential(
+  design <- getDesignGroupSequential(
     sided = 1,
     alpha = 0.05, 
     beta = 0.2,
     kMax = 3, 
     typeOfDesign = proc,
-    typeBetaSpending= bs) #also specify information rates
+    typeBetaSpending= bs,
+    informationRates = rates,
+    bindingFutility = TRUE
+    ) 
   
   # Get parameters
-  parameters = getSampleSizeMeans(design = design, groups = 2, alternative = 0.5)
-  n_gs = ceiling(parameters$maxNumberOfSubjects/3/2) # n per look per group
-  alpha = parameters$criticalValuesPValueScale
-  futility = parameters$futilityBoundsPValueScale
+  parameters <- getSampleSizeMeans(design = design, groups = 2, alternative = 0.5)
+  n_gs = ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
+  alpha <- parameters$criticalValuesPValueScale
+  futility <- parameters$futilityBoundsPValueScale
   
   if(return == "alpha") {return(alpha)}
   if(return == "n") {return(n_gs)}
   if(return == "futility") {return(futility)}
 }
 
-n_p = alpha_gs(proc = "asP")
-alpha_p = alpha_gs(proc = "asP", return = "alpha")
-futility_p = alpha_gs(proc = "asP", return = "futility") #futility on critical p-value scale
-futility_pd = round(
+n_p <- gs(proc = "asP")[1]
+alpha_p <- gs(proc = "asP", return = "alpha") #p-value scale
+alpha_pd <- round(c( #critical d-value scale
+  qt(1-alpha_p[1], df = 2*n_p-2) / sqrt(n_p/2),
+  qt(1-alpha_p[2], df = 4*n_p-2) / sqrt(2*n_p/2),
+  qt(1-alpha_p[3], df = 6*n_p-2) / sqrt(3*n_p/2)
+  )
+  ,2)
+
+futility_p <- gs(proc = "asP", return = "futility") #futility on critical p-value scale
+futility_pd <- round(
   c(qt(1 - futility_p[1], df = (n_p*2)-2)/sqrt(n_p/2), 
     qt(1 - futility_p[2], df = 4*n_p-2)/sqrt(2*n_p/2)), 
-  2) #futility for pococock on critical d-value
+  2) #futility for pocock on critical d-value
 
-n_of = alpha_gs(proc = "asOF")
-alpha_of = alpha_gs(proc = "asOF", return = "alpha")
-futility_of = alpha_gs(proc = "asOF", return = "futility")  
-futility_ofd = round(
-  c(qt(1 - futility_of[1], df = (n_of*2)-2)/sqrt(n_of/2), 
-    qt(1 - futility_of[2], df = 4*n_of-2)/sqrt(2*n_of/2)), 
+n_of <- gs(proc = "asOF")
+alpha_of <- gs(proc = "asOF", return = "alpha")#p-value scale
+alpha_ofd <- round(c( #critical d-value scale
+  qt(1-alpha_of[1], df = 2*n_of[1]-2) / sqrt(n_of[1]/2),
+  qt(1-alpha_of[2], df = 2*(n_of[1]+n_of[2])-2) / sqrt((n_of[1]+n_of[2])/2),
+  qt(1-alpha_of[3], df = 2*(sum(n_of))-2) / sqrt(sum(n_of)/2)
+  ),2)
+
+futility_of <- gs(proc = "asOF", return = "futility")  #futility on critical p-value scale
+futility_ofd <- round(
+  c(qt(1 - futility_of[1], df = (n_of[1]*2)-2)/sqrt(n_of[1]/2), 
+    qt(1 - futility_of[2], df = 2*(n_of[1]+n_of[2])-2)/sqrt((n_of[1]+n_of[2])/2)), 
   2) #futility for OBF on critical d-value scale
 
-d.plot = function(n, alpha, t) {
-  df = 2*n-2
-  critical_d = round(qt(1-alpha, df = 2*n-2) * sqrt(2*(1/n)),2)
+d.plot <- function(n, alpha, t) {
+  df <- 2*n-2
+  critical_d <- round(qt(1-alpha, df = 2*n-2) * sqrt(2*(1/n)),2)
   p <- ggplot(data.frame(x = c(-4, 4)), aes(x)) +
-    stat_function(fun = dt, args = list(df = df)) +
-    stat_function(fun = dt, args = list(df = df), 
-                  xlim = c(qt(p = 1 - alpha, df = df), 4),
-                  geom = "area", fill = "red", alpha = 0.6) +
-    labs(title = t, y = "Density", subtitle = "*p*-value") +
+    stat_function(
+      fun = dt, 
+      args = list(df = df)
+      ) +
+    stat_function(
+      fun = dt, 
+      args = list(df = df), 
+      xlim = c(qt(p = 1 - alpha, df = df), 4),
+      geom = "area", 
+      fill = "red", 
+      alpha = 0.3
+      ) +
+    labs(title = t, y = "Density") +
     theme_bw() +
-    theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
-          plot.subtitle = ggtext::element_markdown(size = 13, hjust = 0.5),
-          axis.title.x = element_blank(),
-          axis.title.y = element_blank(), 
-          axis.text.y = element_blank(),
-          axis.text.x = element_text(size = 11)) + 
+    theme(
+      plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
+      plot.subtitle = ggtext::element_markdown(size = 13, hjust = 0.5),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(), 
+      axis.text.y = element_blank(),
+      axis.text.x = element_text(size = 10),
+      axis.text.x.top = ggtext::element_markdown(),
+      axis.text.x.bottom = ggtext::element_markdown(),
+      panel.grid = element_blank()
+      ) + 
     geom_vline(xintercept = qt(1-alpha, df = df), linetype = 2, color = "grey") 
   return(p)
 }
 
 
-p1 = d.plot(n = n_p, alpha = alpha_p[1], t = "Pocock (First Look)") +
+p1 <- d.plot(n = n_p, alpha = alpha_p[1], t = "Pocock (First Look)") +
   scale_x_continuous(
-    limits = c(0, 1*sqrt(n_p/2)), 
-    breaks = c(0, .2*sqrt(n_p/2), .4*sqrt(n_p/2), .6*sqrt(n_p/2), .8*sqrt(n_p/2)),
-    labels = c(0, .2, .4, .6, .8),
-    sec.axis = dup_axis( #create secondary p-value axis
-      labels = c(
-        signif(
-          sapply(
-            c(0, .2*sqrt(n_p/2), 
-              .4*sqrt(n_p/2), 
-              .6*sqrt(n_p/2), 
-              .8*sqrt(n_p/2)), 
-            function(x) pt(-abs(x), df = 2*n_p-2)), 1)))) +
-  annotate(geom = "text", x = 1.525, y = 0.29, fontface = "bold", size = 2.3,
-           label = paste0(
-             "CONTINUE \n", 
-             futility_pd[1],
-             " \u2264 d < ",
-             round(qt(1-alpha_p[1], df = 2*n_p-2) * sqrt(2*(1/n_p)),2),
-             "\n",
-             signif(alpha_p[1], 2),
-             " < p \u2264 ",
-             signif(futility_p[1], 2))) +
-  annotate(geom = "text", x = 3, y = 0.29,   
-           label = paste0(
-             "REJECT \n d \u2265 ", 
-             round(qt(1-alpha_p[1], df = 2*n_p-2) * sqrt(2*(1/n_p)),2),
-             "\n p \u2264 ", 
-             gsub("0.", ".", as.character(signif(alpha_p[1], 2)), fixed = T)), 
-           fontface = "bold", size = 2.3) +
-  geom_vline(xintercept = futility_pd[1] *sqrt(n_p/2), linetype = "dashed", color = "grey") +
-  stat_function(
-    fun = dt, args = list(df = 2*n_p -2), 
-    xlim = c(0, qt(1 - futility_p[1], df = 2*n_p -2)),
-    geom = "area", fill = "grey", alpha = 0.3) +
-  annotate(geom = "text", x = 0.1, y = 0.29, label = "FAIL \n TO \n REJECT", fontface = "bold", size = 2.3) +
-  annotate(geom = "text", x = 3.2, y = 0.07,   label = paste0("N = ", n_p), fontface = "italic", size = 2.3)
-
-p2 = d.plot(n = 2*n_p, alpha = alpha_p[2], t = "Pocock (Second Look)") +
-  scale_x_continuous(
-    limits = c(0.05*sqrt(2*n_p/2), 0.6*sqrt(2*n_p/2)),
-    breaks = c(.2*sqrt(2*n_p/2), .4*sqrt(2*n_p/2)),
-    labels = c(.2, .4),
+    limits = c(-0.44, 1*sqrt(n_p/2)), #create secondary p-value axis
+    breaks = c(futility_pd[1]*sqrt(n_p/2), alpha_pd[1]*sqrt(n_p/2)),
+    labels = paste0("*d* = ", round(c(futility_pd[1], alpha_pd[1]), 2)),
     sec.axis = dup_axis(
-      labels = c(signif(
-        sapply(
-          c(.2*sqrt(2*n_p/2), 
-            .4*sqrt(2*n_p/2)), 
-          function(x) pt(-abs(x), df = 4*n_p-2)), 1)))) +
-  geom_vline(xintercept = futility_pd[2] *sqrt(2*n_p/2), linetype = "dashed", color = "grey") +
+      labels = paste0("*p* = ", round(c(futility_p[1], alpha_p[1]), 2)) 
+    )
+  ) +
+  annotate(
+    geom = "text", 
+    x = 1.525, 
+    y = 0.27, 
+    fontface = "bold", 
+    size = 2.2,
+    label = paste0(
+      "CONTINUE \n", 
+      futility_pd[1],
+      " < d < ",
+      alpha_pd[1],
+      "\n",
+      signif(alpha_p[1], 2),
+      " < p < ",
+      signif(futility_p[1], 2))
+    ) +
+  annotate(
+    geom = "text", 
+    x = 3, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H0 \n d > ", 
+      alpha_pd[1],
+      "\n p < ", 
+      gsub("0.", ".", as.character(signif(alpha_p[1], 2)), fixed = T)), 
+    fontface = "bold", 
+    size = 2.2
+    ) +
+  geom_vline(
+    xintercept = futility_pd[1] *sqrt(n_p/2), 
+    linetype = "dashed", 
+    color = "grey"
+    ) +
   stat_function(
-    fun = dt, args = list(df = 4*n_p -2), 
-    xlim = c(0, qt(1 - futility_p[2], df = 4*n_p -2)),
-    geom = "area", fill = "grey", alpha = 0.3) +
-  annotate(geom = "text", x = 1.625, y = 0.29, fontface = "bold", size = 2.3,
-           label = paste0(
-             "CONTINUE \n", 
-             futility_pd[2],
-             " \u2264 d < ",
-             round(qt(1-alpha_p[2], df = 4*n_p-2) / sqrt(2*n_p/2),2),
-             "\n",
-             signif(alpha_p[2], 2),
-             " < p \u2264 ",
-             signif(futility_p[2], 2))) +
-  annotate(geom = "text", x = 2.6, y = 0.29,   
-           label = paste0(
-             "REJECT \n d \u2265 ", 
-             round(qt(1-alpha_p[2], df = 4*n_p-2) / sqrt(2*n_p/2),2),
-             "\n p \u2264 ", 
-             gsub("0.", ".", as.character(signif(alpha_p[2], 2)), fixed = T)), 
-           fontface = "bold", size = 2.3) +
-  annotate(geom = "text", x = 0.43, 
-           y = 0.29,   
-           label = "FAIL \n TO \n REJECT", 
-           fontface = "bold", 
-           size = 2.3) +
-  annotate(geom = "text", 
-           x = 2.75, 
-           y = 0.07,
-           label = paste0("N = ", 2*n_p), #check if this is still correct
-           fontface = "italic", 
-           size = 2.3)
+    fun = dt, 
+    args = list(df = 2*n_p -2), 
+    xlim = c(-0.44, qt(1 - futility_p[1], df = 2*n_p -2)),
+    geom = "area", 
+    fill = "red", 
+    alpha = 0.3
+    ) +
+  stat_function(
+    fun = dt, 
+    args = list(df = 2*n_p -2), 
+    xlim = c(
+      qt(1 - futility_p[1], df = 2*n_p -2), 
+      qt(p = 1 - alpha_p[1], df = 2*n_p-2)
+      ),
+    geom = "area", 
+    fill = "grey", 
+    alpha = 0.3
+  ) +
+  annotate(
+    geom = "text", 
+    x = -0.035, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H1 \n d < ",
+      futility_pd[1],
+      "\n p > ", 
+      round(futility_p[1], 2)
+      ), 
+    fontface = "bold", 
+    size = 2.2
+    ) +
+  annotate(
+    geom = "text", 
+    x = 3.2, 
+    y = 0.07,   
+    label = paste0("N = ", n_p), 
+    fontface = "italic", 
+    size = 2.2)
 
-p3 = d.plot(n = 3*n_p, alpha = alpha_p[3], t = "Pocock (Third Look)") +
+p2 <- d.plot(
+  n = 2*n_p, 
+  alpha = alpha_p[2], 
+  t = "Pocock (Second Look)"
+  ) +
+  scale_x_continuous(
+    limits = c(0.02*sqrt(2*n_p/2), 0.6*sqrt(2*n_p/2)),
+    breaks = c(futility_pd[2]*sqrt(2*n_p/2), alpha_pd[2]*sqrt(2*n_p/2)),
+    labels = paste0("*d* = ", round(c(futility_pd[2], alpha_pd[2]), 2)),
+    sec.axis = dup_axis(
+      labels = paste0("*p* = ", round(c(futility_p[2], alpha_p[2]), 2)) 
+    )
+  ) +
+  geom_vline(
+    xintercept = futility_pd[2] *sqrt(2*n_p/2), 
+    linetype = "dashed", 
+    color = "grey"
+    ) +
+  stat_function(
+    fun = dt, 
+    args = list(df = 4*n_p -2), 
+    xlim = c(0, qt(1 - futility_p[2], df = 4*n_p -2)),
+    geom = "area", 
+    fill = "red", 
+    alpha = 0.3
+    ) +
+  stat_function(
+    fun = dt, 
+    args = list(df = 2*n_p -2), 
+    xlim = c(
+      qt(1 - futility_p[2], df = 4*n_p -2), 
+      qt(p = 1 - alpha_p[2], df = 4*n_p-2)
+    ),
+    geom = "area", 
+    fill = "grey", 
+    alpha = 0.3
+  ) +
+  annotate(
+    geom = "text", 
+    x = 1.6, 
+    y = 0.27, 
+    fontface = "bold", 
+    size = 2.2,
+    label = paste0(
+      "CONTINUE \n", 
+      futility_pd[2],
+      " < d < ",
+      alpha_pd[2],
+      "\n",
+      signif(alpha_p[2], 2),
+      " < p < ",
+      signif(futility_p[2], 2))
+    ) +
+  annotate(
+    geom = "text", 
+    x = 2.6, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H0 \n d > ",
+      alpha_pd[2],
+      "\n p < ", 
+      gsub("0.", ".", as.character(signif(alpha_p[2], 2)), fixed = T)),
+    fontface = "bold", 
+    size = 2.2
+    ) +
+  annotate(
+    geom = "text", 
+    x = 0.41, 
+    y = 0.27,  
+    label = paste0(
+      "REJECT H1 \n d < ",
+      futility_pd[2],
+      "\n p > ",
+      round(futility_p[2], 2)
+      ), 
+    fontface = "bold", 
+    size = 2.2
+    ) +
+  annotate(
+    geom = "text", 
+    x = 2.75, 
+    y = 0.07,
+    label = paste0("N = ", 2*n_p), 
+    fontface = "italic", 
+    size = 2.2
+    )
+
+p3 <- d.plot(
+  n = 3*n_p, 
+  alpha = alpha_p[3], 
+  t = "Pocock (Third Look)") +
   scale_x_continuous(
     limits = c(0, 0.6*sqrt(3*n_p/2)),
-    breaks = c(0, .2*sqrt(3*n_p/2), .4*sqrt(3*n_p/2), .6*sqrt(3*n_p/2)),
-    labels = c(0, .2, .4, .6),
+    breaks = alpha_pd[3]*sqrt(3*n_p/2),
+    labels = paste0("*d* = ", round(alpha_pd[3], 2)),
     sec.axis = dup_axis(
-      labels = c(signif(
-        sapply(c(
-          0, .2*sqrt(3*n_p/2), 
-          .4*sqrt(3*n_p/2), 
-          .6*sqrt(3*n_p/2)), 
-          function(x) pt(-abs(x), df = 6*n_p-2)), 1)))) +
+      labels = paste0("*p* = ", round(alpha_p[3], 2))
+      )
+    ) +
   stat_function(
     fun = dt, 
     args = list(df = 6*n_p -2), 
     xlim = c(0, qt(1 - alpha_p[3], df = 6*n_p-2)),
     geom = "area", 
     fill = "grey", 
-    alpha = 0.3) +
-  annotate(geom = "text", 
-           x = 0.23, 
-           y = 0.29,   
-           label = "FAIL \n TO \n REJECT", 
-           fontface = "bold", 
-           size = 2.3) +
-  annotate(geom = "text", 
-           x = 3, 
-           y = 0.29,   
-           label = paste0(
-             "REJECT \n d \u2265 ", 
-             round(qt(1-alpha_p[3], df = 6*n_p-2) / sqrt(3*n_p/2),2),
-             "\n p \u2264 ", 
-             gsub("0.", ".", as.character(signif(alpha_p[3], 2)), fixed = T)), 
-           fontface = "bold", size = 2.3)  +
-  annotate(geom = "text", 
-           x = 3.3, 
-           y = 0.07,   
-           label = paste0("N = ", 3*n_p), 
-           fontface = "italic", 
-           size = 2.3)
+    alpha = 0.3
+    ) +
+  annotate(
+    geom = "text", 
+    x = 0.23, 
+    y = 0.27,  
+    label = "FAIL \n TO \n REJECT", 
+    fontface = "bold", 
+    size = 2.2
+    ) +
+  annotate(
+    geom = "text",
+    x = 3, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H0 \n d > ",
+      alpha_pd[3],
+      "\n p < ", 
+      gsub("0.", ".", as.character(signif(alpha_p[3], 2)), fixed = T)
+      ), 
+    fontface = "bold", 
+    size = 2.2
+    )  +
+  annotate(
+    geom = "text",
+    x = 3.3, 
+    y = 0.07, 
+    label = paste0("N = ", 3*n_p), 
+    fontface = "italic",
+    size = 2.2
+    )
 
 tiff(file="figures/figure1a.tiff",width=2500,height=800, units = "px", res = 300)
-grid.arrange(p1, p2, p3, nrow = 1, bottom = "Cohen's d", 
+grid.arrange(p1, p2, p3, nrow = 1, 
              left = textGrob("Density under H0: \u03b4 = 0", rot = 90, hjust = 0.57,
                              gp = gpar(fontsize = 10)))
 dev.off()
@@ -240,134 +366,223 @@ dev.off()
 ########################## FIGURE 1B: O'BRIEN-FLEMING EXAMPLE ########################## 
 #======================================================================================#
 
-of1 = d.plot(n = n_of, alpha = alpha_of[1], t = "O'Brien-Fleming (First Look)") +
+of1 <- d.plot(n = n_of[1], alpha = alpha_of[1], t = "O'Brien-Fleming (First Look)") +
   scale_x_continuous(
-    limits = c(0, 1.5*sqrt(n_of/2)), 
-    breaks = c(0, .4*sqrt(n_of/2), .8*sqrt(n_of/2), 1.2*sqrt(n_of/2)),
-    labels = c(0, .4, .8, 1.2),
+    limits = c(-0.46, 1*sqrt(n_of[1]/2)), 
+    breaks = c(futility_ofd[1]*sqrt(n_of[1]/2), alpha_ofd[1]*sqrt(n_of[1]/2)),
+    labels = paste0("*d* = ", round(c(futility_ofd[1], alpha_ofd[1]), 2)),
+    sec.axis = dup_axis( 
+      labels = paste0("*p* = ", round(c(futility_of[1], alpha_of[1]), 2)) 
+    ) #create secondary p-value axis
+  ) +
+  annotate(
+    geom = "text", 
+    x = 1.7, 
+    y = 0.27, 
+    fontface = "bold", 
+    size = 2.2,
+    label = paste0(
+      "CONTINUE \n", 
+      futility_ofd[1],
+      " < d < ",
+      alpha_ofd[1],
+      "\n",
+      signif(alpha_of[1], 2),
+      " < p < ",
+      signif(futility_of[1], 2))
+  ) +
+  annotate(
+    geom = "text", 
+    x = 3.2, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H0 \n d > ", 
+      alpha_ofd[1],
+      "\n p < ", 
+      gsub("0.", ".", as.character(signif(alpha_of[1], 2)), fixed = T)), 
+    fontface = "bold", 
+    size = 2.2
+  ) +
+  geom_vline(
+    xintercept = futility_ofd[1] *sqrt(n_of[1]/2), 
+    linetype = "dashed", 
+    color = "grey"
+  ) +
+  stat_function(
+    fun = dt, 
+    args = list(df = 2*n_of[1]-2), 
+    xlim = c(-0.46, qt(1 - futility_of[1], df = 2*n_of[1] -2)),
+    geom = "area", 
+    fill = "red", 
+    alpha = 0.3
+  ) +
+  stat_function(
+    fun = dt, 
+    args = list(df = 2*n_of[1] -2), 
+    xlim = c(
+      qt(p = 1 - futility_of[1], df = 2*n_of[1] -2), 
+      qt(p = 1 - alpha_of[1], df = 2*n_of[1] -2)
+    ),
+    geom = "area", 
+    fill = "grey", 
+    alpha = 0.3
+  ) +
+  annotate(
+    geom = "text", 
+    x = 0.005, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H1 \n d < ",
+      futility_ofd[1],
+      "\n p > ", 
+      round(futility_of[1], 2)
+    ), 
+    fontface = "bold", 
+    size = 2.2
+  ) +
+  annotate(
+    geom = "text", 
+    x = 3.2, 
+    y = 0.07,   
+    label = paste0("N = ", n_of[1]), 
+    fontface = "italic", 
+    size = 2.2)
+
+of2 <- d.plot(n = n_of[1] + n_of[2], alpha = alpha_of[2], t = "O'Brien-Fleming (Second Look)") +
+  scale_x_continuous(
+    limits = c(-0.15, 0.8*sqrt((n_of[1]+n_of[2])/2)), 
+    breaks = c(futility_ofd[2]*sqrt((n_of[1]+n_of[2])/2), alpha_ofd[2]*sqrt((n_of[1]+n_of[2])/2)),
+    labels = paste0("*d* = ", round(c(futility_ofd[2], alpha_ofd[2]), 2)),
+    sec.axis = dup_axis( 
+      labels = paste0("*p* = ", round(c(futility_of[2], alpha_of[2]), 2)) 
+    ) #create secondary p-value axis
+  ) +
+  annotate(
+    geom = "text", 
+    x = 1.5825, 
+    y = 0.27, 
+    fontface = "bold", 
+    size = 2.2,
+    label = paste0(
+      "CONTINUE \n", 
+      futility_ofd[2],
+      " < d < ",
+      alpha_ofd[2],
+      "\n",
+      signif(alpha_of[2], 2),
+      " < p < ",
+      signif(futility_of[2], 2))
+  ) +
+  annotate(
+    geom = "text", 
+    x = 3, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H0 \n d > ", 
+      alpha_ofd[2],
+      "\n p < ", 
+      gsub("0.", ".", as.character(signif(alpha_of[2], 2)), fixed = T)), 
+    fontface = "bold", 
+    size = 2.2
+  ) +
+  geom_vline(
+    xintercept = futility_ofd[2] *sqrt((n_of[1]+n_of[2])/2), 
+    linetype = "dashed", 
+    color = "grey"
+  ) +
+  stat_function(
+    fun = dt, 
+    args = list(df = 2*(n_of[1]+n_of[2])-2), 
+    xlim = c(-0.15, qt(1 - futility_of[2], df = 2*(n_of[1]+n_of[2])-2)),
+    geom = "area", 
+    fill = "red", 
+    alpha = 0.3
+  ) +
+  stat_function(
+    fun = dt, 
+    args = list(df = 2*(n_of[1]+n_of[2])-2), 
+    xlim = c(
+      qt(p = 1 - futility_of[2], df = 2*(n_of[1]+n_of[2])-2), 
+      qt(p = 1 - alpha_of[2], df = 2*(n_of[1]+n_of[2])-2)
+    ),
+    geom = "area", 
+    fill = "grey", 
+    alpha = 0.3
+  ) +
+  annotate(
+    geom = "text", 
+    x = 0.255, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H1 \n d < ",
+      futility_ofd[2],
+      "\n p > ", 
+      round(futility_of[2], 2)
+    ), 
+    fontface = "bold", 
+    size = 2.2
+  ) +
+  annotate(
+    geom = "text", 
+    x = 3.2, 
+    y = 0.07,   
+    label = paste0("N = ", n_of[1]+n_of[2]), 
+    fontface = "italic", 
+    size = 2.2)
+
+of3 <- d.plot(
+  n = sum(n_of), 
+  alpha = alpha_of[3], 
+  t = "O'Brien-Fleming (Third Look)") +
+  scale_x_continuous(
+    limits = c(0, 0.6*sqrt(sum(n_of)/2)),
+    breaks = alpha_ofd[3]*sqrt(sum(n_of)/2),
+    labels = paste0("*d* = ", round(alpha_ofd[3], 2)),
     sec.axis = dup_axis(
-      labels = c(
-        signif(
-          sapply(
-            c(0, .4*sqrt(n_of/2), 
-              .8*sqrt(n_of/2), 
-              1.2*sqrt(n_of/2)), 
-            function(x) pt(-abs(x), df = 2*n_of-2)), 1)))) +
-  annotate(geom = "text", x = 2, y = 0.27,   fontface = "bold", size = 2.3,
-           label = paste0(
-             "CONTINUE \n", 
-             futility_ofd[1],
-             " \u2264 d < ",
-             round(qt(1-alpha_of[1], df = 2*n_of-2) * sqrt(2*(1/n_of)),2),
-             "\n",
-             signif(alpha_of[1], 2),
-             " < p \u2264 ",
-             signif(futility_of[1], 2))) +
-  annotate(geom = "text", x = 4.1, y = 0.27,   
-           label = paste0(
-             "REJECT \n d \u2265 ", 
-             round(qt(1-alpha_of[1], df = 2*n_of-2) * sqrt(2*(1/n_of)),2),
-             "\n p \u2264 ", 
-             gsub("0.", ".", as.character(signif(alpha_of[1], 2)), fixed = T)), 
-           fontface = "bold", size = 2.3) +
-  annotate(geom = "text", 
-           x = 4.3, 
-           y = 0.07,   
-           label = paste0("N = ", n_of), 
-           fontface = "italic", 
-           size = 2.3)
-
-of2 = d.plot(n = 2*n_of, alpha = alpha_of[2], t = "O'Brien-Fleming (Second Look)") +
-  scale_x_continuous(
-    limits = c(0, 0.8*sqrt(2*n_of/2)),
-    breaks = c(0, .2*sqrt(2*n_of/2), .4*sqrt(2*n_of/2), .6*sqrt(2*n_of/2)),
-    labels = c(0, .2, .4, .6),
-    sec.axis = dup_axis(labels = c(signif(
-      sapply(c(0, .2*sqrt(2*n_of/2), 
-               .4*sqrt(2*n_of/2), 
-               .6*sqrt(2*n_of/2)), 
-             function(x) pt(-abs(x), df = 4*n_of-2)), 1)))) +
-  geom_vline(xintercept = futility_ofd[2] *sqrt(2*n_of/2), linetype = "dashed", color = "grey") +
+      labels = paste0("*p* = ", round(alpha_of[3], 2))
+    )
+  ) +
   stat_function(
     fun = dt, 
-    args = list(df = 4*n_of -2), 
-    xlim = c(0, qt(1 - futility_of[2], df = 4*n_of -2)),
+    args = list(df = 2*sum(n_of)-2), 
+    xlim = c(0, qt(1 - alpha_of[3], df = 2*sum(n_of)-2)),
     geom = "area", 
     fill = "grey", 
-    alpha = 0.3) +
-  annotate(geom = "text", x = 1.65, y = 0.27,   fontface = "bold", size = 2.3,
-           label = paste0(
-             "CONTINUE \n", 
-             futility_ofd[2],
-             " \u2264 d < ",
-             round(qt(1-alpha_of[2], df = 4*n_of-2) / sqrt(2*n_of/2),2),
-             "\n",
-             signif(alpha_of[2], 2),
-             " < p \u2264 ",
-             signif(futility_of[2], 2))) +
-  annotate(geom = "text", x = 2.8, y = 0.27,   
-           label = paste0(
-             "REJECT \n d \u2265 ", 
-             round(qt(1-alpha_of[2], df = 4*n_of-2) / sqrt(2*n_of/2),2),
-             "\n p \u2264 ", 
-             gsub("0.", ".", as.character(signif(alpha_of[2], 2)), fixed = T)), 
-           fontface = "bold", size = 2.3) +
-  annotate(geom = "text", 
-           x = 0.25, 
-           y = 0.27,   
-           label = "FAIL \n TO \n REJECT", 
-           fontface = "bold", 
-           size = 2.3) +
-  annotate(geom = "text", 
-           x = 3.2, 
-           y = 0.07,   
-           label = paste0("N = ", 2*n_of), 
-           fontface = "italic", 
-           size = 2.3)
+    alpha = 0.3
+  ) +
+  annotate(
+    geom = "text", 
+    x = 0.25, 
+    y = 0.27,  
+    label = "FAIL \n TO \n REJECT", 
+    fontface = "bold", 
+    size = 2.2
+  ) +
+  annotate(
+    geom = "text",
+    x = 2.8, 
+    y = 0.27, 
+    label = paste0(
+      "REJECT H0 \n d > ",
+      alpha_ofd[3],
+      "\n p < ", 
+      gsub("0.", ".", as.character(signif(alpha_of[3], 2)), fixed = T)
+    ), 
+    fontface = "bold", 
+    size = 2.2
+  )  +
+  annotate(
+    geom = "text",
+    x = 3, 
+    y = 0.07, 
+    label = paste0("N = ", sum(n_of)), 
+    fontface = "italic",
+    size = 2.2
+  )
 
-of3 = d.plot(n = 3*n_of, alpha = alpha_of[3], t = "O'Brien-Fleming (Third Look)") +
-  scale_x_continuous(
-    limits = c(0, 0.6*sqrt(3*n_of/2)),
-    breaks = c(0, .2*sqrt(3*n_of/2), .4*sqrt(3*n_of/2), .6*sqrt(3*n_of/2)),
-    labels = c(0, .2, .4, .6),
-    sec.axis = dup_axis(labels = c(signif(
-      sapply(c(0, 
-               .2*sqrt(3*n_of/2), 
-               .4*sqrt(3*n_of/2), 
-               .6*sqrt(3*n_of/2)), 
-             function(x) pt(-abs(x), df = 6*n_of-2)), 1)))) +
-  stat_function(
-    fun = dt, 
-    args = list(df = 6*n_of -2), 
-    xlim = c(0, qt(1 - alpha_of[3], df = 6*n_of-2)),
-    geom = "area", 
-    fill = "grey", 
-    alpha = 0.3) +
-  annotate(geom = "text", 
-           x = 0.25, 
-           y = 0.27,   
-           label = "FAIL \n TO \n REJECT", 
-           fontface = "bold", 
-           size = 2.3) +
-  annotate(geom = "text", 
-           x = 2.8, 
-           y = 0.27,   
-           label = paste0(
-             "REJECT \n d \u2265 ", 
-             round(qt(1-alpha_of[3], df = 6*n_of-2) / sqrt(3*n_of/2),2),
-             "\n p \u2264 ", 
-             gsub("0.", ".", as.character(signif(alpha_of[3], 2)), fixed = T)), 
-           fontface = "bold", 
-           size = 2.3) +
-  annotate(geom = "text", 
-           x = 3, 
-           y = 0.07,   
-           label = paste0("N = ", 3*n_of), 
-           fontface = "italic", 
-           size = 2.3)
 
 tiff(file="figures/figure1b.tiff",width=2500,height=800, units = "px", res = 300)
-grid.arrange(of1, of2, of3, nrow = 1, bottom = "Cohen's d", 
+grid.arrange(of1, of2, of3, nrow = 1,
              left = textGrob("Density under H0: \u03b4 = 0", rot = 90, hjust = 0.57, 
                              gp = gpar(fontsize = 10)))
 dev.off()
@@ -487,9 +702,8 @@ dev.off()
   xlim <- c(min(CIlow, range(xticks)[1]), max(range(xticks)[2], CIhigh))
   
   ##ggplot 
-  
-  label1 <- sprintf("BF[1] == '%0.2f'", round(BF10, 2))
-  label2 <- sprintf("BF[0] == '%0.2f'", round(BF01, 2))
+  label1 <- sprintf("BF[1] == '%0.2f'", BF10)
+  label2 <- sprintf("BF[0] == '%0.2f'", BF01)
 
   ggplot(mapping = aes(x = seq(xlim[1], xlim[2], length.out = 1000), 
                        y = posteriorLine)) +

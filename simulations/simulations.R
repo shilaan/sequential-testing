@@ -475,7 +475,7 @@ run_all_procedures = function(nsims){
         prior = list("normal", list(prior.mean = 0.5, prior.variance = 0.3)),
         n.min = 25, 
         n.max = 75, 
-        alternative = "greater", 
+        alternative = "greater", #directionality of the prior
         boundary = 3, 
         B = nsims,
         verbose = TRUE, 
@@ -513,9 +513,6 @@ run_all_procedures = function(nsims){
           n2 = n_cumulative)$value 
         ) 
     
-        #ie 2*t/sqrt(degrees of freedom)
-    
-    
     data.table(df)[, .(id, 
                        proc, 
                        segment, 
@@ -525,7 +522,7 @@ run_all_procedures = function(nsims){
                        d_actual = true.ES, 
                        power, 
                        decision, 
-                       ES = emp.ES, #ES = 2*t/sqrt(degrees of freedom) 
+                       ES = emp.ES, #ES = Cohen's d (2*t/sqrt(degrees of freedom)) 
                        ES_corrected)]
     
   }
