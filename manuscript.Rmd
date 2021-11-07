@@ -411,13 +411,19 @@ For the group-sequential designs, we can see that the available median-unbiased 
 
 To make sense of this result, we revisit Figure 3B. In the first and second segment of the ISP, the critical effect size (i.e., the effect size that needs to be observed to reject the null hypothesis) is *d* = 0.57. An effect $d \ge$ 0.57 leads to an early stop with a decision to reject the null hypothesis; an effect $d \le$ 0.16 leads to an early stop with a decision not to reject the null hypothesis. An observed effect size 0.16 $\le$ *d* < 0.57 is considered inconclusive, after which the data is discarded and a new batch of observations is collected. As a result, *effect sizes closest to the true population effect size are discarded*.  
 
-In figures A1-A4 in Appendix A, the reader can find that this observation is not merely idiosyncratic to the test chosen (a two-sample *t* test with $\alpha$ = .05 and $\beta = .20$ for a hypothesized population effect size $\delta$ = 0.5). In contrast, across dozens of different test specifications, effect size estimates stemming from the ISP are consistently bimodal and systematically exclude the true population effect size from being observed. Because the ISP involves running three independent mini-experiments (rather than accumulating data over time), the individual segments -- with the exception of the last segment, for which a very weak $\alpha$ is set -- are severely underpowered. The first $k_{max} - 1$ segments of the ISP tend to have less than 50% power. As a result, the critical effect size for these segments will always be higher than the hypothesized effect size. In our worked example, the first two individual segments have a power of `r round(isp_power*100)`%. To make sure that the hypothesized effect size is not weeded out by the procedure's significance filter, the power of each individual segment must be set to at least 50%. 
+In figures A1-A4 in Appendix A, the reader can find that this observation is not merely idiosyncratic to the test chosen (a two-sample *t* test with $\alpha$ = .05 and $\beta = .20$ for a hypothesized population effect size $\delta$ = 0.5). In contrast, across dozens of different test specifications, effect size estimates stemming from the ISP are consistently bimodal and systematically exclude the true population effect size from being observed. Because the ISP involves running three independent mini-experiments (rather than accumulating data over time), the individual segments -- with the exception of the last segment, for which a very weak $\alpha$ is set -- are severely underpowered. The first $k_{max} - 1$ segments of the ISP tend to have less than 50% power. As a result, the critical effect size for these segments will always be higher than the hypothesized effect size. In our worked example, the first two individual segments have a power of `r round(isp_power*100)`%. To make sure that the hypothesized effect size is not consistently weeded out by the procedure's significance filter, the power of each individual segment must be set to at least 50%. 
 
-It is enlightening to consider that the Sequential Bayes Factor and Group-Sequential procedures are similarly biased in earlier segments. Early stopping acts as a filter that weeds out moderately sized effects: the only effect sizes that are maintained are the ones that are relatively small or in the wrong direction (e.g., when stopping for futility); or the ones that are really large (e.g., when stopping for efficacy). However, due to the cumulative nature of data collection and analysis, the bias inherent in early terminations tends to be compensated for by studies that terminate at later stages [@goodman2007; @fan2004; @schonbrodt2017]. As more observations are collected, the variability in effect size estimates decreases. Unfortunately, this is not the case for the Independent Segments Procedure. 
+It is enlightening to consider that the Sequential Bayes Factor and Group-Sequential procedures are similarly biased in earlier segments. Early stopping acts as a filter that weeds out moderately sized effects: the only effect sizes that are maintained are the ones that are relatively small or in the wrong direction (e.g., when stopping for futility), or the ones that are really large (e.g., when stopping for efficacy). However, due to the cumulative nature of data collection and analysis, the bias inherent in early terminations tends to be compensated for by studies that terminate at later stages [@goodman2007; @fan2004; @schonbrodt2017]. As more observations are collected, the variability in effect size estimates decreases. Unfortunately, this is not the case for the Independent Segments Procedure. 
 
-The median effect size estimates across all possible values of $\delta$ are shown in Table 4. As expected, the median effect size estimates stemming from fixed-sample hypothesis tests are equal to the true population effect size. Median effect size estimates stemming from the Pocock-like design deviate only slightly from the true population effect size. In line with previous findings [@schonbrodt2017], median effect size estimates stemming from the Sequential Bayes Factor slightly underestimate the true population effect size for certain true effect sizes. This is because we use the mean of the posterior distribution as the effect size estimator, which shrinks the estimate in early terminations. Again, we see that the median effect size estimates stemming from the Independent Segments Procedure deviate most from the true population effect size. 
+The median effect size estimates across all possible values of $\delta$ are shown in Table 4. As expected, the median effect size estimates stemming from fixed-sample hypothesis tests are equal to the true population effect size. The uncorrected median effect size estimates stemming from the Pocock-like and O'Brien-Fleming-like designs deviate only slightly from the true population effect size. When the population effect size is relatively small ($\delta < 0.2$), the Pocock-like and O'Brien-Fleming-like effect size estimates slightly underestimate the true effect; when the population effect size is relatively large ($\delta > 0.4$), the Pocock-like and O'Brien-Fleming-like effect size estimates slightly overestimate the true population effect size. As can be read in the Table, the group-sequential median-unbiased estimator, used to adjust for bias in the effect size estimates, provides a remarkable improvement in the accuracy of the parameter estimates. In all cases, the group-sequential bias-adjusted effect size estimate is equal to or no more than $d = 0.02$ removed from the true population parameter.      
 
-Consider the columns of Table 4 that show the median effect size estimates for the respective procedures when the true population effect size $\delta$ = 0.2, 0.4, or 0.6. When the true population effect size $\delta$ = 0.2, the median effect size estimate on the basis of the ISP is *d* = 0.06 (compared to 0.13, 0.13, 0.16, and 0.20 for the SBF, Pocock-like, O'Brien-Fleming-like, and fixed sample procedures, respectively). When the true population effect size $\delta$ = 0.4, the median effect size estimate on the basis of the ISP is *d* = 0.57 (compared to 0.45, 0.42, 0.42, and 0.40 for the Pocock-like, O'Brien-Fleming-like procedure, SBF, and fixed sample procedures, respectively). When the true population effect size $\delta$ = 0.6, the median effect size estimate on the basis of the ISP is *d* = 0.74 (compared to 0.66, 0.62, 0.60, and 0.58 for the Pocock-like, O'Brien-Fleming-like procedure, fixed sample, and SBF procedures, respectively). 
+For the unadjusted Bayesian effect size estimates, a similar patterns holds: smaller effect sizes are slightly underestimated, while larger effect sizes are slightly overestimated. The bias-adjusted estimate (the mean of the posterior distribution) increases the estimates for smaller population effect sizes (i.e., for early terminations in which the null was accepted), and shrinks the estimates for larger population effect sizes (i.e., for early terminations in which the alternative was accepted). Although this provides a slight improvement in the parameter estimate for certain population effect sizes ($\delta$ = 0.2, 0.5, and 0.6), the Bayesian bias-corrected estimates do not perform as well as the group-sequential bias-corrected estimates.  
+
+Again, we see that the median effect size estimates stemming from the Independent Segments Procedure deviate most from the true population effect size. Consider the columns of Table 4 that show the median effect size estimates for the respective procedures when the true population effect size $\delta$ = 0.2, 0.4, or 0.6. When the true population effect size $\delta$ = 0.2, the median effect size estimate on the basis of the ISP is *d* = 0.05, compared to the following unadjusted (adjusted) estimates for the Pocock-like, SBF, and O'Brien-Fleming-like procedures: 0.13 (0.20), 0.14 (0.17), and 0.16 (0.20). The bias-corrected estimates are no further than *d* = 0.03 removed from the true population value (with the group-sequential estimates not at all deviating from the true value), while the ISP underestimates the population value by *d* = 0.15.  
+
+When the true population effect size $\delta$ = 0.4, the median effect size estimate on the basis of the ISP is *d* = 0.57, compared to the following unadjusted (adjusted) estimates for the SBF, Pocock-like, and O'Brien-Fleming-like procedures: 0.47 (0.47), 0.45 (0.39), and 0.45 (0.40). The bias-corrected estimates are no further than *d* = 0.07 removed from the true population value (with the group-sequential estimates deviating only *d* = 0.01 from the true value), while the ISP overestimates the population value by *d* = 0.17. 
+
+When the true population effect size $\delta$ = 0.6, the median effect size estimate on the basis of the ISP is *d* = 0.74, compared to the following unadjusted (adjusted) estimates for the Pocock-like, SBF, and O'Brien-Fleming-like procedures: 0.67 (0.58), 0.65 (0.62), and 0.64 (0.59). The bias-corrected estimates are no further than *d* = 0.02 removed from the true population value, while the ISP overestimates the population value by *d* = 0.14. 
 
 Figure 7 visualizes the information captured by Table 4, illustrating the differences between the median estimated effect sizes and true effect sizes. We can see that the Sequential Bayes Factor underestimates the true effect size for certain parameters and the Group-Sequential procedures slightly underestimate the true effect when it is smaller ($\delta \le$ 0.2) and slightly overestimate it when it is larger ($\delta \ge$ 0.4). As before, the ISP shows the greatest deviations from the true effect size. 
 
@@ -468,7 +474,7 @@ Earlier, we introduced the reader to two trade-offs of potential importance to t
 
 As discussed earlier, the SBF allows researchers to specify their uncertainty regarding the effect size by means of a prior distribution. Thus, for researchers who wish to incorporate prior beliefs (e.g., because they work in a subject area with high uncertainty about expected effect sizes), the SBF presents an appealing research strategy [@stefan2020]. On the other hand, if a researcher wants robust (i.e., guaranteed) error control, group-sequential designs present an appealing research strategy.  
 
-Despite the trade-off between accurate effect size estimation and efficient hypothesis testing [@goodman2007; @schonbrodt2017], I find that both the SBF procedure and the GS procedure can provide relatively accurate estimates of effect size. Thus, the Sequential Bayes Factor and Group-Sequential procedures can substantially increase research efficiency at only a slight cost to our ability to estimate an effect size. 
+Despite the trade-off between accurate effect size estimation and efficient hypothesis testing [@goodman2007; @schonbrodt2017], I find that both the SBF procedure and the GS procedure can provide relatively accurate estimates of effect size. Thus, the Sequential Bayes Factor and group-sequential procedures can substantially increase research efficiency at only a slight cost to our ability to estimate an effect size. For Sequential Bayes Factors, the mean of the posterior distribution shrinks the effect size estimate in case of early terminations when the population effect size is large. However, the mean of the posterior distribution does not always provide an improvement: at times, the adjusted estimate is further removed from the true value than the unadjusted estimate. In the case of group-sequential designs, however, we find a remarkable increase in the accuracy of parameter estimation when relying on available median unbiased estimators. Thus, users of group-sequential designs are recommended to always use bias-adjusted estimates for parameter estimation. 
 
 # Conclusion
 
@@ -499,7 +505,7 @@ We have learned that scientific experiments can require substantial time, money,
 | **Control of error rates** | Direct | Direct | Indirect (e.g., through simulation) |
 | **Bias correction procedure**| Available | Does not exist | Available |
 | **Flexibility** | Moderately flexible | Highly restrictive | Highly flexible |
-| **Acceptance of the null** | Possible | Impossible | Possible |
+| **Rejection of the alternative** | Possible | Impossible | Possible |
 
 \newpage
 
@@ -507,6 +513,7 @@ We have learned that scientific experiments can require substantial time, money,
 ## *True Negative, False Positive, and Inconclusive Rate*
 
 ```{r include = F}
+#df <- read.csv("simulations/data.csv")
 
 df = df %>% 
   mutate(
@@ -579,20 +586,45 @@ knitr::kable(t3)
 ## *Median Effect Size Estimate*
 
 ```{r, include = FALSE}
-med = df %>% 
-  group_by(name, d_actual) %>% 
-  summarize(medianES = median(ES)) %>% 
-  rename(Procedure = name)
+df_long <- df %>% 
+  pivot_longer(
+    cols = c(ES, ES_corrected),
+    names_to = c("ES_type"),
+    values_to = "ES"
+    ) 
 
-t4 = med %>% mutate(medianES = medianES %>% round(2)) %>%  
-  pivot_wider(names_from = d_actual, names_prefix = "*d* = ", values_from = medianES)
+median <- df_long %>% 
+  group_by(name, d_actual, ES_type) %>% 
+  summarize(medianES = round(median(ES), 2)) %>% 
+  rename(Procedure = name) %>% 
+  filter(!((ES_type == "ES_corrected") & (Procedure == "Fixed" | Procedure == "ISP"))) %>% 
+  rowwise() %>% 
+  mutate(
+    name = case_when(
+      ES_type == "ES" ~ as.character(Procedure),
+      ES_type == "ES_corrected" ~ paste(Procedure, "adjusted")
+      )
+    ) %>% 
+  ungroup() %>% 
+  select(name, d_actual, medianES) %>% 
+  rename(Procedure = name)
+  
+
+t4 <- median %>% 
+  pivot_wider(
+    names_from = d_actual, 
+    names_prefix = "*d* = ", 
+    values_from = medianES
+    )
+
+t4
 ```
 
 ```{r, echo = FALSE}
-knitr::kable(t4) #perhaps add median fold inflation to the tables (i.e., exaggeration ratio)
+knitr::kable(t4) 
 ```
 
-*Note.* The table shows the median effect size estimate across simulations. The effect size measure is Cohen's d. 
+*Note.* The table shows the median effect size estimate across simulations. The naive effect size measure is Cohen's *d*. For the group-sequential designs, a median unbiased estimator (available in statistical software such as `rpact`) was used to calculate the bias-adjusted estimate; for the Sequential Bayes Factor, the bias-adjusted estimate is the mean of the posterior distribution. 
 
 \newpage
 
