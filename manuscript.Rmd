@@ -395,7 +395,7 @@ All data, analysis code, and research materials are available at [link]. The stu
 
 The error rates involved in the procedures under discussion are shown in Table 2A, Table 2B, and Figure 4. Table 2A describes the rates of True Negative, Inconclusive, and False Positive results when the true population effect size $\delta$ = 0; Table 2B describes the rates of True Positive, Inconclusive, and False Negative results when the true population effect size $\delta$ = 0.50. As can be read from the tables, the frequentist procedures all perform as expected: 5% of simulations rejected the null hypothesis when $\delta$ = 0 (i.e., a type I error rate of 5%; see the False Positive column Table 2A) and 80-82% of simulations rejected the null hypothesis when $\delta$ = 0.5 (i.e., a type II error rate of 18-20%; see the True Positive column of Table 2B).
 
-In addition, the results speak to the ability of using simulations to design an efficient Bayesian hypothesis testing procedure with attractive long-run properties. In this case, the False Positive rate of the SBF procedure is 6% and the True Positive rate of the SBF procedure is 84%. In line with previous findings [@schonbrodt2017; @schonbrodt2018; @stefan2020], I find that simulation-based approaches allow researchers to choose an optimal Sequential Bayes Factor design that controls expected error rates. It has previously been shown that the maximum-flexibility SBF procedure -- with appropriate choices for the decision threshold and the prior distribution of effect sizes under the alternative hypothesis -- can perform (at least) as well as other (sequential) procedures in terms of false-positive and false-negative error rates [@schonbrodt2017; @stefan2020]. Here, I show that this observation holds when we use a restricted version of the SBF with $k_{max}$ = 3 equally spaced looks. Continuous monitoring may often be impractical [@jennison2000]. Thus, it is of great interest that the SBF may be implemented in a group-wise manner, with a guaranteed upper limit on sample size, while retaining the ability to control expected error rates.  
+In addition, the results speak to the ability of using simulations to design an efficient Bayesian hypothesis testing procedure with attractive long-run properties. In this case, the False Positive rate of the SBF procedure is 6% and the True Positive rate of the SBF procedure is 84%. In line with previous findings [@schonbrodt2017; @schonbrodt2018; @stefan2020], I find that simulation-based approaches allow researchers to choose an optimal Sequential Bayes Factor design that controls expected error rates. It has previously been shown that the maximum-flexibility SBF procedure -- with appropriate choices for the decision threshold and the prior distribution of effect sizes under the alternative hypothesis -- can perform (at least) as well as other (sequential) procedures in terms of false-positive and false-negative error rates [@schonbrodt2017; @stefan2020]. Here, I show that this observation holds when we use a restricted version of the SBF with $k_{max}$ = 3 equally spaced looks. Continuous monitoring is often impractical [@jennison2000]. Thus, it is of great interest that the SBF may be implemented in a group-wise manner, with a guaranteed upper limit on sample size, while retaining the ability to control expected error rates.  
 
 ## Efficiency
 
@@ -425,12 +425,13 @@ When the true population effect size $\delta$ = 0.4, the median effect size esti
 
 When the true population effect size $\delta$ = 0.6, the median effect size estimate on the basis of the ISP is *d* = 0.74, compared to the following unadjusted (adjusted) estimates for the Pocock-like, SBF, and O'Brien-Fleming-like procedures: 0.67 (0.58), 0.65 (0.62), and 0.64 (0.59). The bias-corrected estimates are no further than *d* = 0.02 removed from the true population value, while the ISP overestimates the population value by *d* = 0.14. 
 
-Figure 7 visualizes the information captured by Table 4, illustrating the differences between the median estimated effect sizes and true effect sizes. We can see that the Sequential Bayes Factor underestimates the true effect size for certain parameters and the Group-Sequential procedures slightly underestimate the true effect when it is smaller ($\delta \le$ 0.2) and slightly overestimate it when it is larger ($\delta \ge$ 0.4). As before, the ISP shows the greatest deviations from the true effect size. 
+Figure 7 visualizes the information captured by Table 4, illustrating the differences between the median estimated effect sizes and the true effect sizes. For the Sequential Bayes Factor, we can see that the uncorrected estimated slightly underestimate the true population effect size when it is small, and slightly overestimate the true population effect size when it is large. The bias-adjusted estimate, the mean of the posterior distribution, corrects for this phenomenon -- but it is important to note that the Bayesian bias-adjusted estimates only provide a slight improvement or, for certain parameters, an overcorrection. Contrast this with the two bottom row panels for the group-sequential designs. Here, we witness that the group-sequential median unbiased estimator lives up to its name. As before, the ISP shows the greatest overall deviation from the true effect size. 
 
 ```{r, echo = FALSE}
 df <- read.csv("simulations/data.csv")
 
 mean_mse <- df %>% 
+  filter(d_actual == d_forpower) %>% 
   group_by(proc, d_actual) %>% 
   summarize(
     mse = mean((ES_corrected - d_actual) ^2),
@@ -451,8 +452,7 @@ mean_mse <- df %>%
   round(2)
 ```
 
-
-Figure 8 shows the mean squared error of the four procedures. The mean squared error is a measure of the accuracy of an estimator, composed of two elements: variance (the spread of effect size estimates from one sample to the other) and squared bias (the difference between the mean estimated effect size and the true population effect size). We find that the Independent Segments Procedure has the greatest degree of mean squared error. In addition, we find that the error stems mostly from the higher variance of effect size estimates. As discussed before, the variance in the effect size estimates stemming from the ISP is caused by the process of conducting three independent mini-experiments, rather than a cumulative study. In the language of decision theory, the ISP is inadmissible: its total squared error risk exceeds that of other hypothesis testing procedures (in our worked example, mean MSE = `r mean_mse[1]` for the ISP, compared to `r mean_mse[2]` for the Pocock-like design, `r mean_mse[3]` for the O'Brien-Fleming design, `r mean_mse[4]` for the SBF, and `r mean_mse[5]` for the fixed-sample procedure).  
+Figure 8 shows the mean squared error of the five procedures for the naive effect size estimates and the available bias-adjusted estimates. The mean squared error is a measure of the accuracy of an estimator, composed of two elements: variance (the spread of effect size estimates from one sample to the other) and squared bias (the difference between the mean estimated effect size and the true population effect size). We find that the Independent Segments Procedure has the greatest degree of mean squared error. In addition, we find that the error stems mostly from the higher variance of effect size estimates. As discussed before, the variance in the effect size estimates stemming from the ISP is caused by the process of conducting three independent mini-experiments, rather than a cumulative study. In the language of decision theory, the ISP is inadmissible: its total squared error risk exceeds that of other hypothesis testing procedures (in our worked example of $\delta$ = 0.5, MSE = `r mean_mse[1]` for the ISP, compared to `r mean_mse[2]` for the Pocock-like design, `r mean_mse[3]` for the O'Brien-Fleming design, `r mean_mse[4]` for the SBF, and `r mean_mse[5]` for the fixed-sample procedure).  
 
 To provide more meat to this argument, we separate the error of the procedures by segment in Figure 9. Here, we can clearly see that stopping after a first look causes error for all sequential procedures. For both the SBF and the Pocock-like procedure, however, error becomes near-negligible in the second and third segment. As a result, overall error (across all segments) is much lower. This is akin to the bias compensation process we have described above. For the Independent Segments Procedure, as we now know, error remains substantial in every segment, leading to non-negligible overall error. 
 
@@ -503,9 +503,9 @@ We have learned that scientific experiments can require substantial time, money,
 | **Aim** | Efficiently reject $H_0$ in favor of an alternative $H_1$ | Efficiently reject $H_0$ in favor of an alternative $H_1$ | Efficiently examine the evidence for $H_0$ relative to an alternative $H_1$, or vice versa |
 | **Nature of data**  | Cumulative  | Independent  | Cumulative  | Cumulative |
 | **Control of error rates** | Direct | Direct | Indirect (e.g., through simulation) |
-| **Bias correction procedure**| Available | Does not exist | Available |
+| **Bias-adjusted estimator**| Available | Does not exist | Available |
 | **Flexibility** | Moderately flexible | Highly restrictive | Highly flexible |
-| **Rejection of the alternative** | Possible | Impossible | Possible |
+| **Principled rejection of the alternative** | Possible | Impossible | Possible |
 
 \newpage
 
@@ -578,7 +578,7 @@ t3 = E_n %>% mutate(E_n = E_n %>% round()) %>%
 knitr::kable(t3)
 ```
 
-*Note.* 
+*Note.* Average sample size required for five hypothesis testing procedures across a range of unexpected effect sizes. All frequentist procedures were powered to detect an effect of $\delta$ = 0.5. For the Sequential Bayes Factor procedure, simulations were run to choose an optimal sample size, decision threshold, and prior distribution, with the goal of approach similar error rates as the frequentist procedures.   
 
 \newpage
 
@@ -624,7 +624,7 @@ t4
 knitr::kable(t4) 
 ```
 
-*Note.* The table shows the median effect size estimate across simulations. The naive effect size measure is Cohen's *d*. For the group-sequential designs, a median unbiased estimator (available in statistical software such as `rpact`) was used to calculate the bias-adjusted estimate; for the Sequential Bayes Factor, the bias-adjusted estimate is the mean of the posterior distribution. 
+*Note.* The table shows the median effect size estimate across simulations. The naive effect size measure is Cohen's *d*. For the group-sequential designs, a median unbiased estimator (available in statistical software such as `rpact`, Wassmer & Pahlke, 2020) was used to calculate the bias-adjusted estimate; for the Sequential Bayes Factor, the bias-adjusted estimate is the mean of the posterior distribution. 
 
 \newpage
 
@@ -635,7 +635,7 @@ knitr::kable(t4)
 knitr::include_graphics("figures/figure1a.tiff", dpi = 1200)
 ```
 
-*Note.* Pocock-like group-sequential design for a one-tailed, two-sample *t* test with $\alpha$ = .05, $\beta$ = .20 and $k_{max}$ = 3 looks. Critical values are determined on the basis of Pocock-like $\alpha$- and $\beta$-spending functions in *R* package *rpact* (Wassmer & Pahlke, 2020).
+*Note.* Pocock-like group-sequential design for a one-tailed, two-sample *t* test with $\alpha$ = .05, $\beta$ = .20 and $k_{max}$ = 3 equally spaced looks. Critical values are determined on the basis of Pocock-like $\alpha$- and $\beta$-spending functions with bindings futility bounds.
 
 \newpage
 
@@ -646,7 +646,7 @@ knitr::include_graphics("figures/figure1a.tiff", dpi = 1200)
 knitr::include_graphics("figures/figure1b.tiff", dpi = 1200)
 ```
 
-*Note.* O'Brien-Fleming-like group-sequential design for a one-tailed, two-sample *t* test with $\alpha$ = .05, $\beta$ = .20 and $k_{max}$ = 3 looks. Critical values are determined on the basis of O'Brien-Fleming-like $\alpha$- and $\beta$-spending functions in *R* package *rpact* (Wassmer & Pahlke, 2020).
+*Note.* O'Brien-Fleming-like group-sequential design for a one-tailed, two-sample *t* test with $\alpha$ = .05, $\beta$ = .20 and $k_{max}$ = 3 unequally spaced looks (the looks were set to 50%, 75%, and 100%, respectively). Critical values are determined on the basis of O'Brien-Fleming-like $\alpha$- and $\beta$-spending functions with binding futility bounds. 
 
 \newpage
 
@@ -679,7 +679,7 @@ knitr::include_graphics("figures/figure2b.tiff", dpi = 1200)
 knitr::include_graphics("figures/figure3a.tiff", dpi = 1200)
 ```
 
-*Note.* Comparing the general procedures. 
+*Note.* A general comparison of the fixed sample hypothesis test and the independent segments procedure. 
 
 \newpage
 
@@ -697,7 +697,7 @@ knitr::include_graphics("figures/figure3b.tiff", dpi = 1200)
 ## Figure 4
 ## *Error rates of the four procedures* 
 \noindent
-```{r, fig.heigth = 4.72, fig.width = 5}
+```{r, fig.heigth = 4.72, fig.width = 6}
 knitr::include_graphics("figures/figure4.tiff", dpi = 1200)
 ```
 
@@ -720,34 +720,34 @@ knitr::include_graphics("figures/figure5.tiff", dpi = 1200)
 ## Figure 6
 ## *Distribution of Empirical Effect Size Estimates*   
 \noindent
-```{r, fig.heigth = 4.72, fig.width = 5}
+```{r, fig.heigth = 4.72, fig.width = 6}
 knitr::include_graphics("figures/figure6.tiff", dpi = 300)
 ```
   
-*Note.* One-tailed, two-sample *t* tests. Fixed Sample, Independent Segments, and Group-Sequential (Pocock- and O'Brien-Fleming-like) Hypothesis Tests are based on $\alpha$ = .05, 1 - $\beta$ = 0.8 for $\delta$ = 0.5. *N*s per group per look are 51, 25, 24, and 19, respectively, with a maximum number of 3 looks. For the Sequential Bayes Factor, data was collected in (at most three) batches of 22 subjects per group, and the procedure was terminated when the one-tailed Bayes Factor was greater than or equal to 3 in favor of the null or the alternative hypothesis. Figure includes the median effect size estimate. True effect size $\delta$ = 0.5
+*Note.* One-tailed, two-sample *t* tests using, for the frequentist procedures,  $\alpha$ = .05, 1 - $\beta$ = 0.8 for $\delta$ = 0.5. *N*s per group per look are `r n_fixed`, 25, and `r n_p` for the Fixed Sample, Independent Segments, and Pocock-like hypothesis tests. For the O'Brien Fleming test, *N* = `r n_of[1]` per group for the first look, and `r n_of[2]` per group for the last two looks. All sequential procedures were set to a maximum number of $k_{max}$ = 3 looks. For the Sequential Bayes Factor, data was collected in (at most three) batches of 22 subjects per group, and the procedure was terminated when the one-tailed Bayes Factor was greater than or equal to 3 in favor of the null or the alternative hypothesis. Figure includes the median effect size estimate (the solid line is the naive estimate; the dashed line is the bias-adjusted estimate). The true effect size $\delta$ = 0.5. 
 
 \newpage
 
 ## Figure 7
 
-## *Bias in Empirical Effect Size Estimates*   
+## *Median Bias in Empirical Effect Size Estimates*   
 \noindent
-```{r, fig.heigth = 4.72, fig.width = 5}
-knitr::include_graphics("figures/figure7a.tiff", dpi = 300)
+```{r, fig.heigth = 4.72, fig.width = 6}
+knitr::include_graphics("figures/figure7b.tiff", dpi = 300)
 ```
   
-*Note.* Figure displays the mean estimated effect size minus the true effect size.
+*Note.* Figure displays the median estimated effect size minus the true effect size for the five different procedures. The median uncorrected effect size estimate is shown in red; the median bias-adjusted effect size estimate, if available, is shown in blue. 
 
 \newpage
 
 ## Figure 8
 ## *Bias-Variance in Empirical Effect Size Estimates*  
 \noindent
-```{r, fig.heigth = 4.72, fig.width = 5}
-knitr::include_graphics("figures/figure8.tiff", dpi = 300)
+```{r, fig.heigth = 4.72, fig.width = 7}
+knitr::include_graphics("figures/figure8b.tiff", dpi = 300)
 ```
 
-*Note.* 
+*Note.* Figure displays the squared bias, variance, and mean squared error (the sum of the squared bias and the variance) in empirical effect size estimates stemming from the five procedures.  Results are split into two panels for the three procedures that have bias corrections available. For these three procedures -- the Sequential Bayes Factor, Pocock-like group-sequential design, and O'Brien-Fleming-like group-sequential design -- the top panel shows the bias and variance in the naive effect size estimates; the bottom panel shows the bias and variance in the bias-adjusted estimates. 
 
 \newpage
 
@@ -765,8 +765,8 @@ knitr::include_graphics("figures/figure9.tiff", dpi = 300)
 ## Figure A1 
 ## *Distribution of Obtained Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
 \noindent
-```{r, fig.heigth = 11, fig.width = 5}
-knitr::include_graphics("appendix/figures/figureA1.tiff", dpi = 300)
+```{r, fig.heigth = 14, fig.width = 6}
+knitr::include_graphics("appendix/figures/figureA1.tiff", dpi = 1200)
 ```
 
 *Note.* Distributions of effect sizes for the ISP (compared to fixed-sample hypothesis testing), across twelve different combinations of statistical power ($1 - \beta$ = 0.7, 0.8, and 0.9) and population effect size ($\delta$ = 0.2, 0.4, 0.6, 0.8). 

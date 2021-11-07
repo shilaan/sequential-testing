@@ -1173,77 +1173,181 @@ dev.off()
 #========================================================================================#
 # How does the procedure perform when d is unexpected?
 
-df_summary = df %>% 
-  group_by(proc, facet, d_actual) %>% 
+df_long <- df %>% 
+  pivot_longer(
+    cols = c(ES, ES_corrected),
+    names_to = c("ES_type"),
+    values_to = "ES"
+  ) 
+
+df_summary <- df_long %>% 
+  group_by(proc, facet, d_actual, ES_type) %>% 
   summarize(
-    mse = mean((ES_corrected - d_actual) ^2),
-    var = mean((ES_corrected - mean(ES_corrected))^2),
-    median.ES = median(ES_corrected),
-    ES = mean(ES_corrected)
-    ) %>%
+    mse = mean((ES - d_actual) ^2),
+    var = mean((ES - mean(ES))^2),
+    median.ES = median(ES),
+    ES = mean(ES)
+  ) %>% 
   mutate(
     bias = ES - d_actual,
     median.bias = median.ES - d_actual,
     bias.sq = (ES - d_actual)^2,
     median.bias.sq = (median.ES - d_actual)^2
-    )
+  ) %>% 
+  filter(!((ES_type == "ES_corrected") & (proc == "Fixed" | proc == "ISP"))) #%>% 
+  
 
-df_summary %>% 
-  group_by(proc) %>% 
-  summarize(mean.mse = mean(mse))
-# Bias
+# Mean Bias
+
+legend <- data.frame(
+  facet = rep(1),
+  label = c("Uncorrected", "Corrected"),
+  y = c(0.08, 0.05),
+  x = rep(0.1),
+  ES_type = c("ES", "ES_corrected")
+)
+
 tiff(file="figures/figure7a.tiff",width=2300,height=1200, units = "px", res = 300)
 ggplot(data = df_summary, 
-       mapping = aes(x = d_actual, y = bias)) +
+       mapping = aes(x = d_actual, y = bias, color = ES_type)) +
   theme_bw() +
   theme(strip.background = element_rect(fill = "white")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray") + 
-  geom_segment(aes(x = d_actual, xend = d_actual, y = 0, yend = bias),
-               color = "red", linetype = "dashed") + 
+  geom_segment(
+    aes(
+      x = d_actual, 
+      xend = d_actual, 
+      y = 0, 
+      yend = bias, 
+      color = ES_type
+      ),
+    linetype = "dashed"
+    ) + 
   geom_point() +
   facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
   theme(legend.position = "none") +
-  scale_x_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
-                     limits = c(-0.2, 1)) +
+  scale_x_continuous(
+    breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
+    limits = c(-0.2, 1)
+    ) +
   labs(x = "True Effect Size (Cohen's d)", 
-       y = "Mean Estimated Effect Size - True Effect Size")
+       y = "Mean Estimated Effect Size - True Effect Size") +
+  scale_color_manual(values = c("red", "blue")) +
+  geom_text(data = legend, 
+            aes(x = x, y = y, label = label, hjust = 0)) + 
+  geom_line(
+    data = data.frame(
+      x = c(-0.2, 0.05),
+      y = rep(0.08),
+      facet = 1
+    ),
+    mapping = aes(x = x, y = y),
+    color = "red",
+    linetype = "dashed"
+  ) +
+  geom_line(
+    data = data.frame(
+      x = c(-0.2, 0.05),
+      y = rep(0.05),
+      facet = 1
+    ),
+    mapping = aes(x = x, y = y),
+    color = "blue",
+    linetype = "dashed"
+  )
+  
 dev.off()
 
 # Median bias
+
+legend <- data.frame(
+  facet = rep(1),
+  label = c("Uncorrected", "Corrected"),
+  y = c(0.11, 0.06),
+  x = rep(0.1),
+  ES_type = c("ES", "ES_corrected")
+)
+
 tiff(file="figures/figure7b.tiff",width=2300,height=1200, units = "px", res = 300)
 ggplot(data = df_summary, 
-       mapping = aes(x = d_actual, y = median.bias)) +
+       mapping = aes(x = d_actual, y = median.bias, color = ES_type)) +
   theme_bw() +
   theme(strip.background = element_rect(fill = "white")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray") + 
-  geom_segment(aes(x = d_actual, xend = d_actual, y = 0, yend = median.bias),
-               color = "red", linetype = "dashed") + 
+  geom_segment(
+    aes(
+      x = d_actual, 
+      xend = d_actual, 
+      y = 0, 
+      yend = median.bias, 
+      color = ES_type
+    ),
+    linetype = "dashed"
+  ) + 
   geom_point() +
   facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
   theme(legend.position = "none") +
-  scale_x_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
-                     limits = c(-0.2, 1)) +
-  labs(x = "True Effect Size (Cohen's d)", y = "Median Estimated Effect Size - True Effect Size")
+  scale_x_continuous(
+    breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
+    limits = c(-0.2, 1)
+  ) +
+  labs(x = "True Effect Size (Cohen's d)", 
+       y = "Median Estimated Effect Size - True Effect Size") +
+  scale_color_manual(values = c("red", "blue")) +
+  geom_text(data = legend, 
+            aes(x = x, y = y, label = label, hjust = 0)) + 
+  geom_line(
+    data = data.frame(
+      x = c(-0.2, 0.05),
+      y = rep(0.11),
+      facet = 1
+    ),
+    mapping = aes(x = x, y = y),
+    color = "red",
+    linetype = "dashed"
+  ) +
+  geom_line(
+    data = data.frame(
+      x = c(-0.2, 0.05),
+      y = rep(0.06),
+      facet = 1
+    ),
+    mapping = aes(x = x, y = y),
+    color = "blue",
+    linetype = "dashed"
+  )
 dev.off()
+
 
 #===========================================================================#
 ########################## FIGURE 8: BIAS-VARIANCE ########################## 
 #===========================================================================#
-#df_summary = df %>% 
-#  group_by(proc, facet, line, d_actual) %>% 
-#  summarize(mse = mean((ES - d_actual) ^2),
-#            var = mean((ES - mean(ES))^2),
-#            ES = mean(ES)) %>% 
-#  mutate(bias = ES - d_actual,
-#         bias.sq = (ES - d_actual)^2)
+df_summary <- df_summary %>% 
+  mutate(proc_ES = factor(paste0(proc, ES_type))) %>% 
+  mutate(proc_ES = fct_relevel(proc_ES, c(
+    "FixedES", 
+    "BayesES", 
+    "asPES", 
+    "asOFES",
+    "ISPES", 
+    "BayesES_corrected", 
+    "asPES_corrected", 
+    "asOFES_corrected"
+    )
+  ))
 
-#df_summary = df_summary %>% 
-  #mutate(proc = fct_relevel(proc, "Fixed", after = 0)) %>% 
-#  filter(proc != "asOF")
+proc_ES.label <- c("Fixed Hypothesis and \n Equivalence Test", 
+                 "Sequential Bayes Factor \n Naive effect size estimate", 
+                 "Pocock-like GS design  \n Naive effect size estimate",
+                 "O'Brien-Fleming-like GS design  \n Naive effect size estimate",
+                 "Independent Segments \n Procedure", 
+                 "Sequential Bayes Factor \n Bias-adjusted estimator",
+                 "Pocock-like GS design \n Bias-adjusted estimator",
+                 "O'Brien-Fleming-like GS design \n Bias-adjusted estimator")
+names(proc_ES.label) <- levels(df_summary$proc_ES)
 
-#facet.label[4] = "Group-Sequential (Pocock)"
 facet1 = data.frame(
-  facet = 1,
+  proc_ES = factor("FixedES"),
   label1 = "Mean Squared Error",
   label2 = "Variance",
   label3 = "Squared Bias",
@@ -1254,11 +1358,14 @@ facet1 = data.frame(
   y3 = .09
   )
 
-tiff(file="figures/figure8.tiff",width=2300,height=1300, units = "px", res = 300)
+tiff(file="figures/figure8b.tiff",width=2400,height=1300, units = "px", res = 300)
 ggplot(data = df_summary, mapping = aes(x = d_actual, y = bias.sq)) +
-  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
+  facet_wrap(
+    ~ proc_ES, 
+    labeller = labeller(proc_ES = proc_ES.label), 
+    ncol = 4
+    ) +
   theme_bw() +
-  #geom_line(mapping = aes(y = median.bias.sq), color = "grey", linetype = "dotdash") + 
   geom_smooth(color = "black", se = F, size = .6) +
   geom_smooth(mapping= aes(y = mse), se = F, size = .6,
               color = "red", linetype = "dashed") + #MSE
@@ -1268,25 +1375,25 @@ ggplot(data = df_summary, mapping = aes(x = d_actual, y = bias.sq)) +
   labs(x = "True Effect Size (Cohen's d)", y = "Bias-Variance") +
   scale_x_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
                      limits = c(-0.2, 1)) +
-  geom_segment(data = facet1, 
-               aes(x = x1, xend = x2, y = y1, yend = y1), 
-               linetype = "dashed", 
+  geom_segment(data = facet1,
+               aes(x = x1, xend = x2, y = y1, yend = y1),
+               linetype = "dashed",
                color = "red") +
-  geom_segment(data = facet1, 
-               aes(x = x1, xend = x2, y = y2, yend = y2), 
-               linetype = "dotted", 
+  geom_segment(data = facet1,
+               aes(x = x1, xend = x2, y = y2, yend = y2),
+               linetype = "dotted",
                color = "blue") +
   geom_segment(data = facet1, aes(x = x1, xend = x2, y = y3, yend = y3)) +
-  geom_text(data = facet1, 
-            aes(x = x2, y = y1, label = label1, hjust = 0), 
-            size = 2.7, 
+  geom_text(data = facet1,
+            aes(x = x2, y = y1, label = label1, hjust = 0),
+            size = 2.7,
             color = "red") +
-  geom_text(data = facet1, 
-            aes(x = x2, y = y2, label = label2, hjust = 0), 
-            size = 2.7, 
+  geom_text(data = facet1,
+            aes(x = x2, y = y2, label = label2, hjust = 0),
+            size = 2.7,
             color = "blue") +
-  geom_text(data = facet1, 
-            aes(x = x2, y = y3, label = label3, hjust = 0), 
+  geom_text(data = facet1,
+            aes(x = x2, y = y3, label = label3, hjust = 0),
             size = 2.7)
 dev.off()
 
