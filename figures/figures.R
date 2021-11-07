@@ -1,3 +1,9 @@
+# TO DO -------------------------------------------------------------------
+# Include both bias-corrected and uncorrected estimates in the manuscript
+# Write up final results
+# Update Notes for figures
+# Write translational abstract
+
 # Set up ------------------------------------------------------------------
 library(ggplot2)
 library(tidyverse)
@@ -28,20 +34,6 @@ facet.label <- c("Fixed Hypothesis and Equivalence Test",
                 "Pocock-like GS design",
                 "O'Brien-Fleming-like GS design")
 names(facet.label) <- c(1, 2, 3, 4, 5)
-
-# TO DO -------------------------------------------------------------------
-# Include both bias-corrected and uncorrected estimates in the manuscript
-# Write up final results
-# Wrap up discussion/practical recommendations
-# Change Fig 3B according to the changes in 1AB
-# Add equivalence test to Fig 3B
-# Update Notes for figures
-# Put figures S1-S4 in the appendix
-# Write cover letter (note open data + materials badges)
-# Write non-technical abstract
-
-# MAYBE -------------------------------------------------------------------
-# Fix p-values in Fig 1AB 
 
 #=============================================================================#
 ########################## FIGURE 1A: POCOCK EXAMPLE ########################## 
@@ -159,7 +151,7 @@ p1 <- d.plot(n = n_p, alpha = alpha_p[1], t = "Pocock (First Look)") +
       " < d < ",
       alpha_pd[1],
       "\n",
-      signif(alpha_p[1], 2),
+      signif(alpha_p[1], 1),
       " < p < ",
       signif(futility_p[1], 2))
     ) +
@@ -171,7 +163,8 @@ p1 <- d.plot(n = n_p, alpha = alpha_p[1], t = "Pocock (First Look)") +
       "REJECT H0 \n d > ", 
       alpha_pd[1],
       "\n p < ", 
-      gsub("0.", ".", as.character(signif(alpha_p[1], 2)), fixed = T)), 
+      signif(alpha_p[1], 1)
+      ), 
     fontface = "bold", 
     size = 2.2
     ) +
@@ -269,7 +262,7 @@ p2 <- d.plot(
       " < d < ",
       alpha_pd[2],
       "\n",
-      signif(alpha_p[2], 2),
+      signif(alpha_p[2], 1),
       " < p < ",
       signif(futility_p[2], 2))
     ) +
@@ -281,7 +274,8 @@ p2 <- d.plot(
       "REJECT H0 \n d > ",
       alpha_pd[2],
       "\n p < ", 
-      gsub("0.", ".", as.character(signif(alpha_p[2], 2)), fixed = T)),
+      signif(alpha_p[2], 1)
+      ),
     fontface = "bold", 
     size = 2.2
     ) +
@@ -343,7 +337,7 @@ p3 <- d.plot(
       "REJECT H0 \n d > ",
       alpha_pd[3],
       "\n p < ", 
-      gsub("0.", ".", as.character(signif(alpha_p[3], 2)), fixed = T)
+      signif(alpha_p[3], 1)
       ), 
     fontface = "bold", 
     size = 2.2
@@ -390,7 +384,7 @@ of1 <- d.plot(n = n_of[1], alpha = alpha_of[1], t = "O'Brien-Fleming (First Look
       " < d < ",
       alpha_ofd[1],
       "\n",
-      signif(alpha_of[1], 2),
+      signif(alpha_of[1], 1),
       " < p < ",
       signif(futility_of[1], 2))
   ) +
@@ -402,7 +396,8 @@ of1 <- d.plot(n = n_of[1], alpha = alpha_of[1], t = "O'Brien-Fleming (First Look
       "REJECT H0 \n d > ", 
       alpha_ofd[1],
       "\n p < ", 
-      gsub("0.", ".", as.character(signif(alpha_of[1], 2)), fixed = T)), 
+      signif(alpha_of[1], 1)
+      ), 
     fontface = "bold", 
     size = 2.2
   ) +
@@ -462,7 +457,7 @@ of2 <- d.plot(n = n_of[1] + n_of[2], alpha = alpha_of[2], t = "O'Brien-Fleming (
   ) +
   annotate(
     geom = "text", 
-    x = 1.5825, 
+    x = 1.56, 
     y = 0.27, 
     fontface = "bold", 
     size = 2.2,
@@ -472,7 +467,7 @@ of2 <- d.plot(n = n_of[1] + n_of[2], alpha = alpha_of[2], t = "O'Brien-Fleming (
       " < d < ",
       alpha_ofd[2],
       "\n",
-      signif(alpha_of[2], 2),
+      signif(alpha_of[2], 1),
       " < p < ",
       signif(futility_of[2], 2))
   ) +
@@ -484,7 +479,8 @@ of2 <- d.plot(n = n_of[1] + n_of[2], alpha = alpha_of[2], t = "O'Brien-Fleming (
       "REJECT H0 \n d > ", 
       alpha_ofd[2],
       "\n p < ", 
-      gsub("0.", ".", as.character(signif(alpha_of[2], 2)), fixed = T)), 
+      signif(alpha_of[2], 1)
+      ), 
     fontface = "bold", 
     size = 2.2
   ) +
@@ -569,7 +565,7 @@ of3 <- d.plot(
       "REJECT H0 \n d > ",
       alpha_ofd[3],
       "\n p < ", 
-      gsub("0.", ".", as.character(signif(alpha_of[3], 2)), fixed = T)
+      signif(alpha_of[3], 1)
     ), 
     fontface = "bold", 
     size = 2.2
@@ -861,47 +857,76 @@ critical.d = function(proc, segment) {
   critical_d = round(qt(1-alpha, df = 2*n-2) * sqrt(2*(1/n)),2)
   
   p <- ggplot(data.frame(x = c(-4, 4)), aes(x)) +
-    stat_function(fun = dt, args = list(df = df)) +
-    stat_function(fun = dt, args = list(df = df), 
-                  xlim = c(qt(p = 1 - alpha, df = df), 4),
-                  geom = "area", fill = "red", alpha = 0.6) +
-    labs(title = t, y = "Density", subtitle = "*p*-value") +
+    stat_function(
+      fun = dt,
+      args = list(df = df)
+      ) +
+    stat_function(
+      fun = dt, 
+      args = list(df = df), 
+      xlim = c(qt(p = 1 - alpha, df = df), 4),
+      geom = "area", 
+      fill = "red", 
+      alpha = 0.6
+      ) +
+    labs(
+      title = t, 
+      y = "Density"
+      ) +
     theme_bw() +
-    theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
-          plot.subtitle = ggtext::element_markdown(size = 13, hjust = 0.5),
-          axis.title.x = element_blank(),
-          axis.title.y = element_blank(), 
-          axis.text.y = element_blank(),
-          axis.text.x = element_text(size = 11)) + 
+    theme(
+      plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
+      plot.subtitle = ggtext::element_markdown(size = 13, hjust = 0.5),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(), 
+      axis.text.y = element_blank(),
+      axis.text.x = element_text(size = 11),
+      axis.text.x.top = ggtext::element_markdown(),
+      axis.text.x.bottom = ggtext::element_markdown(),
+      panel.grid = element_blank()
+      ) + 
     scale_x_continuous(
-      limits = c(0, .8*sqrt(n/2)), 
-      breaks = c(0, .2*sqrt(n/2), .4*sqrt(n/2), .6*sqrt(n/2)),
-      labels = c(0, .20, .40, .60),
-      sec.axis = dup_axis(labels = c(signif(
-        sapply(c(0, 
-                 .2*sqrt(n/2), 
-                 .4*sqrt(n/2), 
-                 .6*sqrt(n/2)), 
-               function(x) pt(-abs(x), df = df)), c(2, 2, 1, 1))))) +
-    geom_vline(xintercept = qt(1-alpha, df = df), linetype = 2, color = "grey") +
-    stat_function(fun = dt, args = list(df = df), 
-                  xlim = c(0, qt(1 - ifelse(proc == "Fixed", alpha, alpha_weak), df = df)),
-                  geom = "area", fill = "grey", alpha = 0.3) +
-    annotate(geom = "text", 
-             x = 0.25, 
-             y = 0.27,   
-             label = "FAIL \n TO \n REJECT", 
-             fontface = "bold", 
-             size = 2.3) +
-    annotate(geom = "text", 
-             x = 2.5, 
-             y = 0.27,   
-             label = paste0(
-               "REJECT \n d \u2265 ", 
-               critical_d, 
-               "\n p \u2264 ", 
-               gsub("0.", ".", as.character(signif(alpha, 2)), fixed = T)), 
-             fontface = "bold", size = 2.3)
+      limits = c(0, .8*sqrt(n/2)),
+      breaks = qt(1 - alpha, df = df),
+      labels = paste0("*d* = ", critical_d),
+      sec.axis = dup_axis(
+        labels = paste0("*p* = ", round(alpha, 2))
+      )
+    ) + 
+    geom_vline(
+      xintercept = qt(1-alpha, df = df), 
+      linetype = 2, 
+      color = "grey"
+      ) +
+    stat_function(
+      fun = dt, 
+      args = list(df = df), 
+      xlim = c(0, qt(1 - ifelse(proc == "Fixed", alpha, alpha_weak), df = df)),
+      geom = "area", 
+      fill = "grey", 
+      alpha = 0.3
+      ) +
+    annotate(
+      geom = "text", 
+      x = 0.29, 
+      y = 0.27,  
+      label = "FAIL \n TO \n REJECT",
+      fontface = "bold", 
+      size = 2.3
+      ) +
+    annotate(
+      geom = "text", 
+      x = 2.5, 
+      y = 0.27,  
+      label = paste0(
+        "REJECT \n d > ", 
+        critical_d,
+        "\n p < ", 
+        round(alpha, 2)
+        ), 
+      fontface = "bold", 
+      size = 2.3
+      )
   return(p)
 }
 
@@ -914,7 +939,10 @@ p1 = critical.d(proc = "Fixed") +
            size = 2.3)
 
 p2 = critical.d(proc = "ISP", segment = 1) +
-  geom_vline(xintercept = qt(1-alpha_weak, df = 2*n_s-2), linetype = 2, color = "grey") +
+  geom_vline(
+    xintercept = qt(1-alpha_weak, df = 2*n_s-2), 
+    linetype = 2, 
+    color = "grey") +
   annotate(geom = "text", 
            x = 1.5, 
            y = 0.27,   
@@ -922,17 +950,28 @@ p2 = critical.d(proc = "ISP", segment = 1) +
            label = paste0(
              "CONTINUE \n ", 
              round(qt(1-alpha_weak, df = 2*n_s-2) / sqrt(n_s/2),2),
-             " \u2264 d < ", 
+             " < d < ", 
              round(qt(1 - alpha_strong, df = 2*n_s-2) / sqrt(n_s/2), 2), "\n",
              alpha_strong, 
-             " < p \u2264 ", gsub("0.", ".", as.character(round(alpha_weak, 2)), fixed = T)),
+             " < p < ", 
+             round(alpha_weak, 2)
+             ),
            fontface = "bold") +
   annotate(geom = "text", 
            x = 2.65, 
            y = 0.07,   
            label = paste0("N = ", n_s), 
            fontface = "italic", 
-           size = 2.3)
+           size = 2.3) + 
+  scale_x_continuous(
+    limits = c(0, .8*sqrt(n_s/2)),
+    breaks = c(qt(1-alpha_weak, df = 2*n_s-2), qt(1 - alpha_strong, df = 2*n_s-2)),
+    labels = paste0("*d* = ", c(round(qt(1-alpha_weak, df = 2*n_s-2) * sqrt(2*(1/n_s)),2), 
+                                round(qt(1-alpha_strong, df = 2*n_s-2) * sqrt(2*(1/n_s)),2))),
+    sec.axis = dup_axis(
+      labels = paste0("*p* = ", c(round(alpha_weak, 2), round(alpha_strong, 3)))
+    )
+  ) 
 
 p3 = critical.d(proc = "ISP", segment = 3) +
   annotate(geom = "text", 
@@ -943,7 +982,7 @@ p3 = critical.d(proc = "ISP", segment = 3) +
            size = 2.3)
 
 tiff(file="figures/figure3b.tiff",width=2500,height=800, units = "px", res = 300)
-grid.arrange(p1, p2, p3, nrow = 1, bottom = "Cohen's d", 
+grid.arrange(p1, p2, p3, nrow = 1, 
              left = textGrob("Density under H0: \u03b4 = 0", rot = 90, hjust = 0.57,
                              gp = gpar(fontsize = 10)))
 dev.off()
@@ -1149,6 +1188,9 @@ df_summary = df %>%
     median.bias.sq = (median.ES - d_actual)^2
     )
 
+df_summary %>% 
+  group_by(proc) %>% 
+  summarize(mean.mse = mean(mse))
 # Bias
 tiff(file="figures/figure7a.tiff",width=2300,height=1200, units = "px", res = 300)
 ggplot(data = df_summary, 

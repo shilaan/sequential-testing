@@ -19,7 +19,7 @@ author_note: |
   All simulation data, analysis code, and research materials have been made publicly available on the OSF and GitHub and can be accessed at [link] and [link]. 
 
 abstract: >
-  Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. In this practical guide, I outline the commonalities and differences between three sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, and the Independent Segments Procedure. I illustrate how these procedures can be implemented in a group-wise manner. Using Monte Carlo simulations, I compare the performance of these procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing. 
+  Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. In this practical guide, I outline the commonalities and differences between three sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, and the Independent Segments Procedure. I illustrate how these sequential procedures can be implemented in a group-wise manner, and present two trade-offs of importance to the procedures: long-run error control vs. short-run evidence and efficiency in hypothesis testing vs. accuracy in parameter estimation. Using Monte Carlo simulations, I compare the performance of the procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I find that effect size estimates stemming from the Independent Segments Procedure are highly inaccurate, and systematically exclude the true population effect size. I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing while retaining their ability to obtain a credible effect size estimate. 
   
 keywords          : "sequential analysis, hypothesis testing, efficiency, estimation, bias"
 wordcount         : "-"
@@ -88,6 +88,15 @@ n_fixed <- ceiling(
     alternative = "one.sided"
     )$n
   )
+
+isp_power <- 
+  power.t.test(
+    delta = 0.5, 
+    sig.level = .025, #alpha_strong
+    n = 25,
+    type = "two.sample", 
+    alternative = "one.sided"
+    )$power
 
 gs  <- function(proc, return = "n") {
   bs = ifelse(proc == "asOF", "bsOF", "bsP") #specify beta-spending function
@@ -306,7 +315,7 @@ Procedural efficiency is evaluated by means of the average (expected) sample siz
 
 I simulate populations with a specific standardized mean difference $\delta$ and examine the efficiency (i.e., average sample size required), error rates (i.e., rates of false-positive and false-negative evidence), and accuracy (i.e., of the simulation estimate of the population effect size) of five hypothesis testing procedures: the fixed-sample Neyman-Pearson hypothesis test paired with an equivalence test [@lakens2014], the Independent Segments Procedure [@miller2020], a group-sequential design with Pocock-like $\alpha$- and $\beta$-spending functions [@pocock1977; @wassmer2016], a group-sequential design with O'Brien-Fleming-like $\alpha$- and $\beta$-spending functions [@fleming1984; @wassmer2016], and the sequential Bayes Factor [@schonbrodt2017]. 
 
-To facilitate discussion, I focus on one typical scenario in reporting the simulation results. Full results that vary additional parameters are reported in the online supplementary material at [link] and reproducible analysis scripts are available at [link]. For the frequentist procedures (i.e., the fixed-sample N-P procedure paired with an equivalence test, the ISP, and the Pocock-like and O'Brien-Fleming-like GS designs, respectively) under discussion, the chosen typical scenario corresponds to a one-tailed, two-sample hypothesis test powered to 80% ($\beta$ = 0.2) to detect a hypothesized population effect size of $\delta$ = 0.5 with $\alpha$ = .05. In the fixed-sample case, these specifications require a sample size of `r n_fixed` observations per group. The equivalence bounds to achieve 80% power with N = `r n_fixed` are a lower equivalence bound of $\Delta_L$ = -0.58 and an upper equivalence bound of $\Delta_U$ = 0.58.    
+To facilitate discussion, I focus on one typical scenario in reporting the simulation results. Full results that vary additional parameters and reproducible analysis scripts are available at [link]. For the frequentist procedures (i.e., the fixed-sample N-P procedure paired with an equivalence test, the ISP, and the Pocock-like and O'Brien-Fleming-like GS designs, respectively) under discussion, the chosen typical scenario corresponds to a one-tailed, two-sample hypothesis test powered to 80% ($\beta$ = 0.2) to detect a hypothesized population effect size of $\delta$ = 0.5 with $\alpha$ = .05. In the fixed-sample case, these specifications require a sample size of `r n_fixed` observations per group. The equivalence bounds to achieve 80% power with N = `r n_fixed` are a lower equivalence bound of $\Delta_L$ = -0.58 and an upper equivalence bound of $\Delta_U$ = 0.58.    
 
 All sequential procedures, with the exception of the O'Brien-Fleming-like GS design, are set to a maximum number of 3 equally spaced looks (i.e., the interim data are looked at twice, after 33% and 67% of the data are collected, and the final look takes place when all data are collected). In contrast, because the O'Brien-Fleming-like GS design sets such a stringent $\alpha$ threshold in the first look, it is often recommended to have the first look take place on a larger fraction of the data (Daniël Lakens, personal communication, December 19, 2020). In this case, we implemented the O'Brien-Fleming-like GS design with the two interim looks taking place after 50% and 75% of the data, respectively, are collected.  
 
@@ -316,7 +325,7 @@ In addition, a $\beta$-spending function was used to set critical $\alpha_{0,k}$
 
 The parameters for the Sequential Bayes Factor procedure were chosen to allow for maximum comparability with the frequentist sequential procedures, which correspond to a one-tailed hypothesis test powered to detect a hypothesized population effect size of $\delta$ = 0.5 with $\alpha$ = .05 and $k_{max} = 3$ looks. To calculate the Bayes Factor, I used an informed prior (a normal distribution centered at the hypothesized effect size, $\delta = 0.5$). To incorporate information about the sidedness of the hypothesized effect, the prior distribution was truncated at $\delta = 0$ to include only positive values. Thus, like in the one-sided *t*-tests described above, we compare $H_0:~\delta = 0$ to $H_1:~\delta > 0$.  
 
-For the SBF procedure, I ran simulations to choose an optimal sample size (paired to the other procedures under study, with $k_{max}$ = 3 equally spaced looks) and Bayes Factor threshold, such that the overall error rate would approach that of the frequentist procedures (i.e., a false negative rate of 20% and a false positive rate of 5%). In the main paper, I report the results of a max-SBF procedure with the Bayes Factor threshold set to 3 for $H_1$ and 1/3 for $H_0$, the sample size set to $N_{\text{Bayes}}$ = 25 per group per look with $k_{max}$ = 3 looks, and a normal prior distribution centered at $\delta = 0.5$ with $\sigma^2 = 0.3$. In the supplemental materials at [link], results can be found for simulations that vary additional parameters for the max-SBF procedure. Of note, as discussed above, the Sequential Bayes Factor can be implemented much more flexibly (i.e., with as many looks as desired, without a maximum sample size). However, to make the sequential procedures as comparable as possible and to account for practical considerations that researchers may have, each procedure is each implemented with $k_{max}$ = 3 looks. 
+For the SBF procedure, I ran simulations to choose an optimal sample size (paired to the other procedures under study; a group-wise implementation with $k_{max}$ = 3 equally spaced looks) and Bayes Factor threshold, such that the overall error rate would approach that of the frequentist procedures (i.e., a false negative rate of 20% and a false positive rate of 5%). In the main paper, I report the results of a max-SBF procedure with the Bayes Factor threshold set to 3 for $H_1$ and 1/3 for $H_0$, the sample size set to $N_{\text{Bayes}}$ = 25 per group per look with $k_{max}$ = 3 looks, and a normal prior distribution centered at $\delta = 0.5$ with $\sigma^2 = 0.3$. Of note, as discussed above, the Sequential Bayes Factor can be implemented much more flexibly (i.e., with as many looks as desired, without a maximum sample size). However, to make the sequential procedures as comparable as possible and to account for practical considerations that researchers may have, each procedure is each implemented in a group-wise manner, with $k_{max}$ = 3 looks. 
 
 For the simulations, I drew random samples from two normal distributions with common variance $\sigma^2$ = 1 and means $\mu_1$ = 0 and $\mu_2 = \delta$ ($\delta$ = -0.2, 0, 0.2, 0.4, 0.5, 0.6, 0.8, 1). For each hypothesis testing procedure and true effect size $\delta$, 10,000 iterations were simulated (i.e., 5 procedures with 8 distinct true effect sizes and 10,000 replications each, leading to 400,000 observations in total). Below, I briefly outline each of the five decision-theoretic hypothesis testing procedures followed.  
 
@@ -386,7 +395,7 @@ All data, analysis code, and research materials are available at [link]. The stu
 
 The error rates involved in the procedures under discussion are shown in Table 2A, Table 2B, and Figure 4. Table 2A describes the rates of True Negative, Inconclusive, and False Positive results when the true population effect size $\delta$ = 0; Table 2B describes the rates of True Positive, Inconclusive, and False Negative results when the true population effect size $\delta$ = 0.50. As can be read from the tables, the frequentist procedures all perform as expected: 5% of simulations rejected the null hypothesis when $\delta$ = 0 (i.e., a type I error rate of 5%; see the False Positive column Table 2A) and 80-82% of simulations rejected the null hypothesis when $\delta$ = 0.5 (i.e., a type II error rate of 18-20%; see the True Positive column of Table 2B).
 
-In addition, the results speak to the ability of using simulations to design an efficient Bayesian hypothesis testing procedure with attractive long-run properties. In this case, the False Positive rate of the SBF procedure is 6% and the True Positive rate of the SBF procedure is 84%. In line with previous findings [@schonbrodt2017; @schonbrodt2018; @stefan2020], I find that simulation-based approaches allow researchers to choose an optimal Sequential Bayes Factor design that controls expected error rates. It has previously been shown that the maximum-flexibility SBF procedure -- with appropriate choices for the decision threshold and the prior distribution of effect sizes under the alternative hypothesis -- can perform (at least) as well as other (sequential) procedures in terms of false-positive and false-negative error rates [@schonbrodt2017; @stefan2020]. Here, I show that this observation holds when we use a restricted version of the SBF with $k_{max}$ = 3 equally spaced looks.
+In addition, the results speak to the ability of using simulations to design an efficient Bayesian hypothesis testing procedure with attractive long-run properties. In this case, the False Positive rate of the SBF procedure is 6% and the True Positive rate of the SBF procedure is 84%. In line with previous findings [@schonbrodt2017; @schonbrodt2018; @stefan2020], I find that simulation-based approaches allow researchers to choose an optimal Sequential Bayes Factor design that controls expected error rates. It has previously been shown that the maximum-flexibility SBF procedure -- with appropriate choices for the decision threshold and the prior distribution of effect sizes under the alternative hypothesis -- can perform (at least) as well as other (sequential) procedures in terms of false-positive and false-negative error rates [@schonbrodt2017; @stefan2020]. Here, I show that this observation holds when we use a restricted version of the SBF with $k_{max}$ = 3 equally spaced looks. Continuous monitoring may often be impractical [@jennison2000]. Thus, it is of great interest that the SBF may be implemented in a group-wise manner, with a guaranteed upper limit on sample size, while retaining the ability to control expected error rates.  
 
 ## Efficiency
 
@@ -402,7 +411,7 @@ For the group-sequential designs, we can see that the available median-unbiased 
 
 To make sense of this result, we revisit Figure 3B. In the first and second segment of the ISP, the critical effect size (i.e., the effect size that needs to be observed to reject the null hypothesis) is *d* = 0.57. An effect $d \ge$ 0.57 leads to an early stop with a decision to reject the null hypothesis; an effect $d \le$ 0.16 leads to an early stop with a decision not to reject the null hypothesis. An observed effect size 0.16 $\le$ *d* < 0.57 is considered inconclusive, after which the data is discarded and a new batch of observations is collected. As a result, *effect sizes closest to the true population effect size are discarded*.  
 
-In figures S1-S4 in the supplemental files, readers can find that this observation is not merely idiosyncratic to the test chosen (a two-sample *t* test with $\alpha$ = .05 and $\beta = .20$ for a hypothesized population effect size $\delta$ = 0.5). In contrast, across dozens of different test specifications, effect size estimates stemming from the ISP are consistently bimodal and systematically exclude the true population effect size from being observed. 
+In figures A1-A4 in Appendix A, the reader can find that this observation is not merely idiosyncratic to the test chosen (a two-sample *t* test with $\alpha$ = .05 and $\beta = .20$ for a hypothesized population effect size $\delta$ = 0.5). In contrast, across dozens of different test specifications, effect size estimates stemming from the ISP are consistently bimodal and systematically exclude the true population effect size from being observed. Because the ISP involves running three independent mini-experiments (rather than accumulating data over time), the individual segments -- with the exception of the last segment, for which a very weak $\alpha$ is set -- are severely underpowered. The first $k_{max} - 1$ segments of the ISP tend to have less than 50% power. As a result, the critical effect size for these segments will always be higher than the hypothesized effect size. In our worked example, the first two individual segments have a power of `r round(isp_power*100)`%. To make sure that the hypothesized effect size is not weeded out by the procedure's significance filter, the power of each individual segment must be set to at least 50%. 
 
 It is enlightening to consider that the Sequential Bayes Factor and Group-Sequential procedures are similarly biased in earlier segments. Early stopping acts as a filter that weeds out moderately sized effects: the only effect sizes that are maintained are the ones that are relatively small or in the wrong direction (e.g., when stopping for futility); or the ones that are really large (e.g., when stopping for efficacy). However, due to the cumulative nature of data collection and analysis, the bias inherent in early terminations tends to be compensated for by studies that terminate at later stages [@goodman2007; @fan2004; @schonbrodt2017]. As more observations are collected, the variability in effect size estimates decreases. Unfortunately, this is not the case for the Independent Segments Procedure. 
 
@@ -412,7 +421,32 @@ Consider the columns of Table 4 that show the median effect size estimates for t
 
 Figure 7 visualizes the information captured by Table 4, illustrating the differences between the median estimated effect sizes and true effect sizes. We can see that the Sequential Bayes Factor underestimates the true effect size for certain parameters and the Group-Sequential procedures slightly underestimate the true effect when it is smaller ($\delta \le$ 0.2) and slightly overestimate it when it is larger ($\delta \ge$ 0.4). As before, the ISP shows the greatest deviations from the true effect size. 
 
-Figure 8 shows the mean squared error of the four procedures. The mean squared error is a measure of the accuracy of an estimator, composed of two elements: variance (the spread of effect size estimates from one sample to the other) and squared bias (the difference between the mean estimated effect size and the true population effect size). We find that the Independent Segments Procedure has the greatest degree of mean squared error. In addition, we find that the error stems mostly from the higher variance of effect size estimates. As discussed before, the variance in the effect size estimates stemming from the ISP is caused by the process of conducting three independent mini-experiments, rather than a cumulative study.
+```{r, echo = FALSE}
+df <- read.csv("simulations/data.csv")
+
+mean_mse <- df %>% 
+  group_by(proc, d_actual) %>% 
+  summarize(
+    mse = mean((ES_corrected - d_actual) ^2),
+    var = mean((ES_corrected - mean(ES_corrected))^2),
+    median.ES = median(ES_corrected),
+    ES = mean(ES_corrected)
+    ) %>%
+  mutate(
+    bias = ES - d_actual,
+    median.bias = median.ES - d_actual,
+    bias.sq = (ES - d_actual)^2,
+    median.bias.sq = (median.ES - d_actual)^2
+    ) %>% 
+  group_by(proc) %>% 
+  summarize(mean.mse = mean(mse)) %>% 
+  arrange(desc(mean.mse)) %>% 
+  pull(mean.mse) %>% 
+  round(2)
+```
+
+
+Figure 8 shows the mean squared error of the four procedures. The mean squared error is a measure of the accuracy of an estimator, composed of two elements: variance (the spread of effect size estimates from one sample to the other) and squared bias (the difference between the mean estimated effect size and the true population effect size). We find that the Independent Segments Procedure has the greatest degree of mean squared error. In addition, we find that the error stems mostly from the higher variance of effect size estimates. As discussed before, the variance in the effect size estimates stemming from the ISP is caused by the process of conducting three independent mini-experiments, rather than a cumulative study. In the language of decision theory, the ISP is inadmissible: its total squared error risk exceeds that of other hypothesis testing procedures (in our worked example, mean MSE = `r mean_mse[1]` for the ISP, compared to `r mean_mse[2]` for the Pocock-like design, `r mean_mse[3]` for the O'Brien-Fleming design, `r mean_mse[4]` for the SBF, and `r mean_mse[5]` for the fixed-sample procedure).  
 
 To provide more meat to this argument, we separate the error of the procedures by segment in Figure 9. Here, we can clearly see that stopping after a first look causes error for all sequential procedures. For both the SBF and the Pocock-like procedure, however, error becomes near-negligible in the second and third segment. As a result, overall error (across all segments) is much lower. This is akin to the bias compensation process we have described above. For the Independent Segments Procedure, as we now know, error remains substantial in every segment, leading to non-negligible overall error. 
 
@@ -420,42 +454,26 @@ Somewhat paradoxically, here we have an efficient hypothesis testing procedure t
 
 # Discussion
 
-In this final section, I present a practical guide for researchers who wish to choose between the sequential procedures under discussion. Group-sequential designs, Sequential Bayes Factors, and the Independent Segments Procedure each have advantages and disadvantages. In deciding between sequential hypothesis testing procedures, researchers need to carefully weigh the advantages and disadvantages of the procedures of interest, with regard to the context in which they are conducting their research [@stefan2020]. As discussed earlier, the SBF allows researchers to specify their uncertainty regarding the effect size by means of a prior distribution. Thus, for researchers who wish to incorporate prior beliefs (e.g., because they work in a subject area with high uncertainty about expected effect sizes), the SBF presents an appealing research strategy. On the other hand, if a researcher wants robust (i.e., guaranteed) error control, GS designs present an appealing research strategy.   
+In this final section, I present several practical considerations for researchers who wish to choose between the sequential procedures under discussion. Group-sequential designs, Sequential Bayes Factors, and the Independent Segments Procedure each have advantages and disadvantages. In deciding between sequential hypothesis testing procedures, researchers need to carefully weigh the advantages and disadvantages of the procedures of interest, with regard to the context in which they are conducting their research [@stefan2020]. 
 
-Although the ISP has some advantages, none of these advantages are unique: efficiency and explicit error control can be achieved through alternative methods, none of which pose the disadvantages unique to the ISP. The ISP applies only to settings in which a researcher can guarantee an exact number of participants -- allocated equally across segments -- and wishes to test a single hypothesis. More importantly, the researcher in question should be willing to discard valuable data and abstain from the ability to obtain a credible estimate of effect size. 
+A great advantage to the procedures under discussion is that they can all be implemented in a group-wise manner, with a guaranteed upper limit on sample size. Continuous assessment of data can be a serious practical burden. In the field of clinical trial design, early proposals for fully sequential methods that require analysis after every observation -- such as the Sequential Probability Ratio Test -- did not receive widespread acceptance [@pramanik2021]. It was only when methods were extended to more realistic settings, and allowed for the evaluation of outcomes after groups of participants were observed, that sequential methods became widely used [@jennison2000, p. 24; @pramanik2021, pp. 4-5].  
 
-@miller2020 present the independent nature of data collection and analysis built-in to the ISP as an attractive feature that creates simplicity and generality. Based on our simulations, however, we find that the information loss inherent to the procedure is a bug, not a feature, that leads to severe difficulty in effect size estimation. Given the existence of appealing alternatives that have the same advantages (of efficiently testing hypotheses with explicit error control) as the ISP, without its associated disadvantages (of severe difficulty in effect size estimation), the reader is advised to think twice before utilizing the Independent Segments Procedure. 
+Because the O'Brien-Fleming procedure uses very conservative stopping boundaries at earlier looks, the decision rule at the last stage of the experiment (if reached) will be very similar to that of the fixed-sample hypothesis test. In our worked example in Figure 1B, we see that the boundary for rejecting $H_0$ at the final look is $\alpha_{1,3}$ = `r alpha_of[3]`. To practitioners, this has turned out to be an attractive feature [@jennison2000, p. 25]. When using the O'Brien-Fleming correction, it is recommended to collect more than $\displaystyle \frac{1}{k_{max}}$% of the observations before taking the first look, to increases the probability of stopping for efficacy.  
 
-Earlier, we introduced the reader to two trade-offs of potential importance to the sequential hypothesis tester: long-run error control vs. short-run evidence and efficiency in hypothesis testing vs. accuracy in parameter estimation, respectively. The short-run conception of evidence on which the (Sequential) Bayes Factor is based, has been accused of throwing out the error control baby with the bathwater [@mayo2016: p.2]. I show here -- in line with previous work -- that with appropriate design choices, the SBF procedure (implemented with a lower degree of flexibility than in previous investigations) can have comparable error rates to its frequentist alternatives. Moreover, despite the trade-off between accurate effect size estimation and efficient hypothesis testing [@goodman2007; @schonbrodt2017], I find that both the SBF procedure and the GS procedure can provide relatively accurate estimates of effect size. Thus, the Sequential Bayes Factor and Group-Sequential procedures can substantially increase research efficiency at only a slight cost to our ability to estimate an effect size. 
+Although the ISP has some advantages, none of these advantages are unique. Efficiency and explicit error control can be achieved through alternative methods, none of which pose the disadvantages unique to the ISP. The ISP applies only to settings in which a researcher wishes to test a single null hypothesis and does not desire a principled decision rule to reject an alternative hypothesis. In addition, users of the procedure must guarantee an exact number of participants, allocated equally across segments. In realistic settings, however, group sizes and increments in information tend to be unequal and unpredictable [@jennison2000, p. 26]. Most importantly, the researcher in question should be willing to discard valuable data and abstain from the ability to obtain a credible estimate of effect size. 
+
+@miller2020 present the independent nature of data collection and analysis built-in to the ISP as an attractive feature that creates simplicity and generality. Based on our simulations, however, we find that the information loss inherent to the procedure is a bug, not a feature, that leads to severe difficulty in effect size estimation. Users of the Independent Segments Procedure are advised to choose their $\alpha_{strong}$ and overall statistical power such that the effect size of interest will not be systematically excluded. Ideally, each individual segment should be powered to at least 50% to detect the hypothesized effect size; otherwise, the critical effect size (the effect size needed to reject the null and end the experiment) will be higher than the hypothesized effect size, and the user will thus systematically discard the effect size which they intended to detect. This likely means, however, that the users will have to power the procedure to well over 90% (see Figure A1 in the Appendix); consequently, much of the desired efficiency gain will be lost. Given the existence of appealing alternatives that have the same advantages (of efficiently testing hypotheses with explicit error control) as the ISP, without its associated disadvantages (of severe difficulty in effect size estimation), the reader is advised to think twice before utilizing the Independent Segments Procedure. 
+
+Earlier, we introduced the reader to two trade-offs of potential importance to the sequential hypothesis tester: long-run error control vs. short-run evidence and efficiency in hypothesis testing vs. accuracy in parameter estimation, respectively. The short-run conception of evidence on which the (Sequential) Bayes Factor is based, has been accused of throwing out the error control baby with the bathwater [@mayo2016: p.2]. I show here -- in line with previous work -- that with appropriate design choices, the SBF procedure (implemented with a lower degree of flexibility than in previous investigations) can have comparable error rates to its frequentist alternatives. When using the Sequential Bayes Factor procedure, however, researchers are recommended to run simulations [e.g., using the R package `BFDA`, @R-BFDA] to choose an optimal sample size, decision threshold, and prior distribution.  
+
+As discussed earlier, the SBF allows researchers to specify their uncertainty regarding the effect size by means of a prior distribution. Thus, for researchers who wish to incorporate prior beliefs (e.g., because they work in a subject area with high uncertainty about expected effect sizes), the SBF presents an appealing research strategy [@stefan2020]. On the other hand, if a researcher wants robust (i.e., guaranteed) error control, group-sequential designs present an appealing research strategy.  
+
+Despite the trade-off between accurate effect size estimation and efficient hypothesis testing [@goodman2007; @schonbrodt2017], I find that both the SBF procedure and the GS procedure can provide relatively accurate estimates of effect size. Thus, the Sequential Bayes Factor and Group-Sequential procedures can substantially increase research efficiency at only a slight cost to our ability to estimate an effect size. 
 
 # Conclusion
 
-We have learned that scientific experiments can require substantial time, money, and effort. At times, the well-being of research subjects, human or non-human, is at stake [@stefan2020]. In these contexts, sequential hypothesis testing can provide substantial efficiency gains. Group-Sequential designs and the Sequential Bayes Factor procedure are valuable tools for psychological scientists to add to their statistical toolbox.
+We have learned that scientific experiments can require substantial time, money, and effort. At times, the well-being of research subjects, human or non-human, is at stake [@stefan2020]. In these contexts, sequential hypothesis testing can provide substantial efficiency gains. Group-sequential designs and the Sequential Bayes Factor procedure are valuable tools for psychological scientists to add to their statistical toolbox.
 
-<!-- # Practical considerations section  -->
-
-<!-- A great advantage to group-sequential designs (compared to the SPRT or the SBF) is that, unlike the SPRT and the SBF, it is not open-ended: you know exactly how many participants you at most will need to sample. How many interim looks can researchers actually take? Look at how SBF/SPRT are applied in practice. In SBF designs, how often is data analyzed in practice? Look at papers that use it. GS-designs are closed - there is a guaranteed upper limit on sample size.  "Whereas continuous monitoring is desirable, it is often impractical" [@jennison2000: p.21] Ethical considerations: when an experiment is highly costly or may be unsafe, it is an ethical imperative to terminate a trial as soon as possible - in this case, "ethical considerations prescribe that accumulating data be evaluated frequently" [@jennison2000: p.19] -->
-
-<!-- "Armitage (1954, 1958b, 1975) and Bross (1952, 1958) pioneered the use of sequential methods in the medical field, particularly for comparative clinical trials. Initially these plans were fully sequential and did not receive widespread acceptance, perhaps because continuous assessment of study results was often impractical."[@jennison2000: p.24] -->
-
-<!-- Re. O'Brien-Fleming: discuss the very conservative stopping boundary at early analysis, which also makes the decision rule similar to the fixed sample test if the last stage is reached -- "features which have turned out to be very appealing to practitioners"[@jennison2000: p.25] -->
-
-<!-- Methods were "extended to the often more realistic setting in which group sizes, or more generally increments in information, are unequal and unpredictable" [@jennison2000: p.26] (ISP can not be applied in realistic settings.) -->
-
-<!-- "From a practical perspective, there are many hypothesis testing contexts where it is not feasible to implement a SPRT. For instance, a SPRT cannot be applied when data are not collected sequentially. Similarly, it cannot be applied when it is not possible to perform the evaluation as soon as participants are treated... To address these challenges, group sequential designs have been developed to allow for the evaluation of patient outcomes only after groups of patients have been observed or at scheduled interim analysis times" [@pramanik2021: p. 4-5] -->
-
-<!-- "Continuous data monitoring can be a serious practical burden, and the introduction of group sequential tests has led to much wider use of sequential methods. (...) Not only are group sequential tests convenient to conduct, they also provide ample opportunity for early stopping and can achieve most of the benefits of fully sequential tests in terms of lower expected sample sizes and shorter average study lengths." [@jennison2000: p. 38] -->
-
-<!-- # To add -->
-
-<!-- Add in discussion/limitation section: We do not discuss adaptive designs, which extend GS designs and allow for even more flexibility while controlling error rates.  -->
-<!-- List recommendations: for OBF, set unequally spaced looks. For SBF, run simulations to choose an optimal sample size, decision threshold, and prior distribution. -->
-<!-- Discuss the power of the individual segments. Practical advice (can lead to guidance on choosing alpha strong; make sure that the alpha strong you set does not exclude the effect size you are interested in. Write reveal.effectsize function): You have to make sure that the individual segments are each powered to at least 50 percent to detect the hypothesized effect size: otherwise, the critical effect size will be higher than the hypothesized effect size, and you will thus systematically discard the effect sizes that you intended to detect! Show that with the example used, the first two independent segments are powered to ~30%. In all but the last segment, the critical effect size (the effect size you need to observe to claim significance) is a factor larger than the actual population effect that you powered your test for. It is thus impossible to get an unbiased estimate out of anything but the last segment.  When you obtain an effect size close to the true effect, the ISP procedure forces you to continue to the last segment, and *throw out that data*. (You can even graph this exaggeration ratio: create a table that shows the exact critical effect size for all possible combinations, and then you can just read off that plot that you're setting yourself up for overestimation). -->
-<!-- Discuss conditional bias (bias in effect size estimates conditional on stopping early) and unconditional bias (bias in effect size estimates across all studies). All other procedures have low unconditional bias, when you take the late termination studies into account, because they do cumulative analyses — the late termination studies are able to compensate for the bias in the early stage terminations. However, because the independent segments procedure is independent, each individual segment is biased and this is never accounted or compensated for. Thus, the ISP is unique among sequential procedures in that it not only has strong conditional bias (like most sequential procedures): it also has strong unconditional bias. [In this paper, I focused on two properties: conditional bias (bias in effect size estimates conditional on stopping early) and unconditional bias (bias in effect size estimates across all studies). I show that the independent segments procedure is unique among sequential procedures in that it not only has strong conditional bias (like all sequential procedures); it also has strong unconditional bias.] Emphasize that this is also what we see in Figure 3B: we only reject when d > 0.57. (This is not the case for, e.g., Pocock)   -->
-<!-- In the language of decision theory, the ISP is inadmissible: its total squared error risk exceeds that of other hypothesis testing procedures no matter what the true effect size may be.  -->
-<!-- Also refer to MSE as reducible error  -->
-<!-- Emphasize that there is no bias correction available for the ISP, while there is for the SBF and GS.  -->
-<!-- (To make the point that the setup of the simulations is more practical and realistic than previous ones), Show some data on what scientists actually do, e.g., how often they look at their data when they use the Sequential Bayes Factor. Here's some examples on how SBFs are used in practice https://github.com/nicebread/BFDA/blob/master/BFDA_examples.md  -->
 
 \newpage
 
@@ -489,7 +507,6 @@ We have learned that scientific experiments can require substantial time, money,
 ## *True Negative, False Positive, and Inconclusive Rate*
 
 ```{r include = F}
-df = read.csv("simulations/data.csv")
 
 df = df %>% 
   mutate(
@@ -710,3 +727,47 @@ knitr::include_graphics("figures/figure9.tiff", dpi = 300)
 ```
 
 *Note.* 
+
+# Appendix A
+
+## Figure A1 
+## *Distribution of Obtained Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
+\noindent
+```{r, fig.heigth = 11, fig.width = 5}
+knitr::include_graphics("appendix/figures/figureA1.tiff", dpi = 300)
+```
+
+*Note.* Distributions of effect sizes for the ISP (compared to fixed-sample hypothesis testing), across twelve different combinations of statistical power ($1 - \beta$ = 0.7, 0.8, and 0.9) and population effect size ($\delta$ = 0.2, 0.4, 0.6, 0.8). 
+
+\newpage
+
+## Figure A2 
+## *Bias in Obtained Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
+\noindent
+```{r}
+knitr::include_graphics("appendix/figures/figureA2.tiff")
+```
+
+*Note.* Bias in obtained effect sizes for the ISP (compared to fixed-sample hypothesis testing), across twelve different combinations of statistical power ($1 - \beta$ = 0.7, 0.8, and 0.9) and hypothesized population effect size ($H_1: \delta$ = 0.2, 0.4, 0.6, 0.8), for a range of true population effect sizes ($0 \le \delta \le 1$). 
+
+\newpage
+
+## Figure A3 
+## *Bias-Variance in Obtained Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
+\noindent
+```{r, fig.height = 6, fig.width=11}
+knitr::include_graphics("appendix/figures/figureA3.tiff")
+```
+
+*Note.* Bias and variance in obtained effect sizes for the ISP (compared to fixed-sample hypothesis testing), across twelve different combinations of statistical power ($1 - \beta$ = 0.7, 0.8, and 0.9) and hypothesized population effect size ($H_1: \delta$ = 0.2, 0.4, 0.6, 0.8), for a range of true population effect sizes ($0 \le \delta \le 1$). 
+
+\newpage
+
+## Figure A4
+## *Exaggeration of Significant Results using Fixed versus Independent Segments Hypothesis Testing*
+\noindent
+```{r, fig.width=9}
+knitr::include_graphics("appendix/figures/figureA4.tiff")
+```
+
+*Note.* The figure shows obtained significant results for the two different hypothesis testing procedures, across twelve different combinations of statistical power ($1 - \beta$ = 0.7, 0.8, and 0.9) and hypothesized population effect size ($H_1: \delta$ = 0.2, 0.4, 0.6, 0.8). The number of significant results is held constant across conditions (*N* = 5,000), and the significant results are sorted by the observed Cohen's *d*. Results that deviate more than 50% from the true population value are shown in red. Each panel denotes the probability of obtaining a Cohen's *d* that is 50% larger than the true population effect size $\delta$.  
