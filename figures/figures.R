@@ -1,7 +1,3 @@
-# TO DO -------------------------------------------------------------------
-# Write translational abstract
-# Update OSF + GitHub links
-
 # Set up ------------------------------------------------------------------
 library(ggplot2)
 library(tidyverse)

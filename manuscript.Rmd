@@ -16,13 +16,13 @@ affiliation:
 #note: "\\clearpage"
 
 author_note: |
-  All simulation data, analysis code, and research materials have been made publicly available on the OSF and GitHub and can be accessed at [link] and [link]. 
+  All simulation data, analysis code, and research materials have been made publicly available on the OSF and GitHub and can be accessed at osf.io/veczn/ and github.com/shilaan/sequential-testing. 
 
 abstract: >
   Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. I outline the commonalities and differences between three sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, and the Independent Segments Procedure. I illustrate how these sequential procedures can be implemented in a group-wise manner, and present two trade-offs of importance to the procedures: long-run error control vs. short-run evidence and efficiency in hypothesis testing vs. accuracy in parameter estimation. Using Monte Carlo simulations, I compare the performance of the procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I find that effect size estimates stemming from the Independent Segments Procedure are highly inaccurate, and systematically exclude the true population effect size. I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing while retaining their ability to obtain a credible effect size estimate. 
   
 keywords          : "sequential analysis, hypothesis testing, efficiency, estimation, bias"
-wordcount         : "11,387"
+wordcount         : "11,368"
   
 bibliography      : ["references.bib","r-refs.bib"]
 
@@ -68,7 +68,7 @@ knitr::knit_hooks$set(plot = function(x, options) { #function to prevent pandoc 
 
 In 1929, Harold Dodge and Harry Romig introduced the idea of sequential analysis to the science of statistical quality control [@dodge1929]. Sequential analysis is a method of statistical inference that allows data to be analyzed several times during its collection, with the goal of optimizing the amount of resources spent in research [@beffarabret2018]. When Abraham Wald further developed this idea in the 1940s, his work was deemed so useful to the United States military that it was classified as Restricted under the Espionage Act [@wald1973]. 
 
-Fast-forward 80 years, and we find ourselves in a decade of unparalleled methods reform in psychological science [@nelson2018]. At the receiving end of these proposed reforms we often find the statistical power of hypothesis tests [@bakker2012; @button2013]; that is, the long-run probability of observing a statistically significant result ($p < \alpha$) for a given number of subjects and a hypothesized effect size [@morey2016]. 
+Fast-forward 80 years, and we find ourselves in a decade of unparalleled methods reform in psychological science [@nelson2018]. At the receiving end of these proposed reforms we often find the statistical power of hypothesis tests [@bakker2012; @button2013]; that is, the long-run probability of observing a statistically significant result (*p* $< \alpha$) for a given number of subjects and a hypothesized effect size [@morey2016]. 
 
 Several suggestions have been made to increase the statistical power of hypothesis tests conducted in psychological science. Not surprisingly, sequential analysis --- which allows researchers to perform well-powered experiments at lower cost --- has found its way into the limelight [e.g., @beffarabret2018; @lakens2014; @schonbrodt2017; @schnuerch2020; @miller2020]. 
 
@@ -387,7 +387,7 @@ For the simulations, I drew random samples from two normal distributions with co
 
 ## Transparency and openness
 
-All data, code, and research materials are available at [link]. The study was not preregistered. This manuscript was created using `r cite_r("r-refs.bib")`. 
+All data, code, and research materials are available at osf.io/veczn and github.com/shilaan/sequential-testing. The study was not preregistered. This manuscript was created using `r cite_r("r-refs.bib")`. 
 
 # Results
 
@@ -474,9 +474,7 @@ Although the ISP has some advantages, none of these advantages are unique. Effic
 
 @miller2020 present the independent nature of data collection and analysis built-in to the ISP as an attractive feature that creates simplicity and generality. Based on our simulations, however, we find that the information loss inherent to the procedure is a bug, not a feature, that leads to severe difficulty in effect size estimation. Users of the Independent Segments Procedure are advised to choose their $\alpha_{strong}$ and overall statistical power such that the effect size of interest will not be systematically excluded. Ideally, each individual segment should be powered to at least 50% to detect the hypothesized effect size; otherwise, the critical effect size (the effect size needed to reject the null and end the experiment) will be higher than the hypothesized effect size, and the user will thus systematically discard the effect size which they intended to detect. Increasing the power of the individual segments likely means, however, that the user will have to power the overall procedure to well over 90% (see Figure A1 in the Appendix). Consequently, much of the desired efficiency gains will be lost. Given the existence of appealing alternatives that have the same advantages as the ISP (i.e., the ability to efficiently test hypotheses with explicit error control), without its associated disadvantages (i.e., the severe difficulty in effect size estimation), the reader is advised to think twice before utilizing the Independent Segments Procedure. 
 
-Earlier, we introduced the reader to two trade-offs of potential importance to the sequential hypothesis tester: long-run error control vs. short-run evidence and efficiency in hypothesis testing vs. accuracy in parameter estimation, respectively. The short-run conception of evidence on which the (Sequential) Bayes Factor is based, has been accused of throwing out the error control baby with the bathwater [@mayo2016: p.2]. I show here -- in line with previous work -- that with appropriate design choices, the SBF procedure (implemented with a lower degree of flexibility than in previous investigations) can have comparable error rates to its frequentist alternatives. When using the Sequential Bayes Factor procedure, however, researchers are recommended to run simulations [e.g., using the R package `BFDA`, @R-BFDA] to choose an optimal design.  
-
-As discussed earlier, the SBF allows researchers to specify their uncertainty regarding the effect size by means of a prior distribution. Thus, for researchers who wish to incorporate prior beliefs (e.g., because they work in a subject area with high uncertainty about expected effect sizes), the SBF presents an appealing research strategy [@stefan2020]. On the other hand, if a researcher wants robust (i.e., guaranteed) error control, group-sequential designs present an appealing research strategy.  
+Earlier, we introduced the reader to two trade-offs of potential importance to the sequential hypothesis tester: long-run error control vs. short-run evidence and efficiency in hypothesis testing vs. accuracy in parameter estimation, respectively. The short-run conception of evidence on which the (Sequential) Bayes Factor is based, has been accused of throwing out the error control baby with the bathwater [@mayo2016: p.2]. I show here -- in line with previous work -- that with appropriate design choices, the SBF procedure (implemented with a lower degree of flexibility than in previous investigations) can have comparable error rates to its frequentist alternatives. When using the Sequential Bayes Factor procedure, however, researchers are recommended to run simulations [e.g., using the R package `BFDA`, @R-BFDA] to choose an optimal design. As discussed earlier, the SBF allows researchers to specify their uncertainty regarding the effect size by means of a prior distribution. Thus, for researchers who wish to incorporate prior beliefs (e.g., because they work in a subject area with high uncertainty about expected effect sizes), the SBF presents an appealing research strategy [@stefan2020]. On the other hand, if a researcher wants robust (i.e., guaranteed) error control, group-sequential designs present an appealing research strategy.  
 
 Despite the trade-off between accurate effect size estimation and efficient hypothesis testing [@goodman2007; @schonbrodt2017], I find that both the SBF procedure and the GS procedure can provide relatively accurate estimates of effect size. For Sequential Bayes Factors, the mean of the posterior distribution shrinks the effect size estimate in case of early terminations that rejected the null. However, the mean of the posterior distribution does not always provide an improvement: at times, the adjusted estimate is further removed from the true value than the unadjusted estimate. In the case of group-sequential designs, however, we find a remarkable increase in the accuracy of parameter estimation when relying on available median unbiased estimators. Thus, users of group-sequential designs are recommended to always use bias-adjusted estimates for parameter estimation. Overall, the Sequential Bayes Factor and group-sequential procedures can substantially increase research efficiency at only a slight cost to our ability to estimate an effect size. 
 
@@ -728,7 +726,7 @@ knitr::include_graphics("figures/figure5.tiff", dpi = 1200)
 knitr::include_graphics("figures/figure6.tiff", dpi = 300)
 ```
   
-*Note.* One-tailed, two-sample *t* tests using, for the frequentist procedures,  $\alpha$ = .05, 1 - $\beta$ = 0.8 for $\delta$ = 0.5. *N*s per group per look are `r n_fixed`, 25, and `r n_p` for the Fixed Sample, Independent Segments, and Pocock-like hypothesis tests. For the O'Brien Fleming test, *N* = `r n_of[1]` per group for the first look, and `r n_of[2]` per group for the last two looks. All sequential procedures were set to a maximum number of $k_{max}$ = 3 looks. For the Sequential Bayes Factor, data was collected in (at most three) batches of 22 subjects per group, and the procedure was terminated when the one-tailed Bayes Factor was greater than or equal to 3 in favor of the null or the alternative hypothesis. Figure includes the median effect size estimate (the solid line is the naive estimate; the dashed line is the bias-adjusted estimate). The true effect size $\delta$ = 0.5. 
+*Note.* One-tailed, two-sample *t* tests using, for the frequentist procedures,  $\alpha$ = .05 and 1 - $\beta$ = 0.8 for $\delta$ = 0.5. *N*s per group per look are `r n_fixed`, 25, and `r n_p` for the Fixed Sample, Independent Segments, and Pocock-like hypothesis tests. For the O'Brien-Fleming test, *N* = `r n_of[1]` per group for the first look, and `r n_of[2]` per group for the last two looks. All sequential procedures were set to a maximum number of $k_{max}$ = 3 looks. For the Sequential Bayes Factor, data was collected in (at most three) batches of 22 subjects per group. Figure includes the median effect size estimate (the solid line is the naive estimate; the dashed line is the bias-adjusted estimate). The true effect size $\delta$ = 0.5. 
 
 \newpage
 
@@ -767,7 +765,7 @@ knitr::include_graphics("figures/figure9.tiff", dpi = 300)
 # Appendix A
 
 ## Figure A1 
-## *Distribution of Obtained Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
+## *Distribution of Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
 \noindent
 ```{r, fig.heigth = 20}
 knitr::include_graphics("appendix/figures/figureA1.tiff", dpi = 1200)
@@ -789,7 +787,7 @@ knitr::include_graphics("appendix/figures/figureA2.tiff")
 \newpage
 
 ## Figure A3 
-## *Bias-Variance in Obtained Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
+## *Bias-Variance in Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
 \noindent
 ```{r, fig.height = 6, fig.width=11}
 knitr::include_graphics("appendix/figures/figureA3.tiff")
