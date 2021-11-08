@@ -1189,67 +1189,6 @@ df_summary <- df_long %>%
     median.bias.sq = (median.ES - d_actual)^2
   ) %>% 
   filter(!((ES_type == "ES_corrected") & (proc == "Fixed" | proc == "ISP"))) #%>% 
-  
-
-# Mean Bias
-
-legend <- data.frame(
-  facet = rep(1),
-  label = c("Uncorrected", "Corrected"),
-  y = c(0.08, 0.05),
-  x = rep(0.1),
-  ES_type = c("ES", "ES_corrected")
-)
-
-tiff(file="figures/figure7a.tiff",width=2300,height=1200, units = "px", res = 300)
-ggplot(data = df_summary, 
-       mapping = aes(x = d_actual, y = bias, color = ES_type)) +
-  theme_bw() +
-  theme(strip.background = element_rect(fill = "white")) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray") + 
-  geom_segment(
-    aes(
-      x = d_actual, 
-      xend = d_actual, 
-      y = 0, 
-      yend = bias, 
-      color = ES_type
-      ),
-    linetype = "dashed"
-    ) + 
-  geom_point() +
-  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
-  theme(legend.position = "none") +
-  scale_x_continuous(
-    breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
-    limits = c(-0.2, 1)
-    ) +
-  labs(x = "True Effect Size (Cohen's d)", 
-       y = "Mean Estimated Effect Size - True Effect Size") +
-  scale_color_manual(values = c("red", "blue")) +
-  geom_text(data = legend, 
-            aes(x = x, y = y, label = label, hjust = 0)) + 
-  geom_line(
-    data = data.frame(
-      x = c(-0.2, 0.05),
-      y = rep(0.08),
-      facet = 1
-    ),
-    mapping = aes(x = x, y = y),
-    color = "red",
-    linetype = "dashed"
-  ) +
-  geom_line(
-    data = data.frame(
-      x = c(-0.2, 0.05),
-      y = rep(0.05),
-      facet = 1
-    ),
-    mapping = aes(x = x, y = y),
-    color = "blue",
-    linetype = "dashed"
-  )
-dev.off()
 
 # Median bias
 
@@ -1261,7 +1200,7 @@ legend <- data.frame(
   ES_type = c("ES", "ES_corrected")
 )
 
-tiff(file="figures/figure7b.tiff",width=2300,height=1200, units = "px", res = 300)
+tiff(file="figures/figure7.tiff",width=2300,height=1200, units = "px", res = 300)
 ggplot(data = df_summary, 
        mapping = aes(x = d_actual, y = median.bias, color = ES_type)) +
   theme_bw() +
@@ -1350,7 +1289,7 @@ facet1 = data.frame(
   y3 = .09
   )
 
-tiff(file="figures/figure8b.tiff",width=2400,height=1300, units = "px", res = 300)
+tiff(file="figures/figure8.tiff",width=2400,height=1300, units = "px", res = 300)
 ggplot(data = df_summary, mapping = aes(x = d_actual, y = bias.sq)) +
   facet_wrap(
     ~ proc_ES, 

@@ -735,7 +735,7 @@ knitr::include_graphics("figures/figure6.tiff", dpi = 300)
 ## *Median Bias in Empirical Effect Size Estimates*   
 \noindent
 ```{r, fig.heigth = 4.72, fig.width = 6}
-knitr::include_graphics("figures/figure7b.tiff", dpi = 300)
+knitr::include_graphics("figures/figure7.tiff", dpi = 300)
 ```
   
 *Note.* Figure displays the median estimated effect size minus the true effect size for the five different procedures. The median uncorrected effect size estimate is shown in red; the median bias-adjusted effect size estimate, if available, is shown in blue. 
@@ -746,7 +746,7 @@ knitr::include_graphics("figures/figure7b.tiff", dpi = 300)
 ## *Bias-Variance in Empirical Effect Size Estimates*  
 \noindent
 ```{r, fig.heigth = 4.72, fig.width = 7}
-knitr::include_graphics("figures/figure8b.tiff", dpi = 300)
+knitr::include_graphics("figures/figure8.tiff", dpi = 300)
 ```
 
 *Note.* Figure displays the squared bias, variance, and mean squared error (the sum of the squared bias and the variance) in empirical effect size estimates stemming from the five procedures.  Results are split into two panels for the three procedures that have bias corrections available. For these three procedures -- the Sequential Bayes Factor, Pocock-like group-sequential design, and O'Brien-Fleming-like group-sequential design -- the top panel shows the bias and variance in the naive effect size estimates; the bottom panel shows the bias and variance in the bias-adjusted estimates. 
@@ -768,7 +768,7 @@ knitr::include_graphics("figures/figure9.tiff", dpi = 300)
 ## *Distribution of Effect Sizes Using Fixed versus Independent Segments Hypothesis Testing*
 \noindent
 ```{r, fig.heigth = 20}
-knitr::include_graphics("appendix/figures/figureA1.tiff", dpi = 1200)
+knitr::include_graphics("appendix/figures/figureA1.tiff", dpi = 300)
 ```
 
 *Note.* Distributions of effect sizes for the ISP (compared to fixed-sample hypothesis testing), across twelve different combinations of statistical power ($1 - \beta$ = 0.7, 0.8, and 0.9) and population effect size ($\delta$ = 0.2, 0.4, 0.6, 0.8). 
