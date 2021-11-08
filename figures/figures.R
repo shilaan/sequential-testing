@@ -1,8 +1,6 @@
 # TO DO -------------------------------------------------------------------
-# Include both bias-corrected and uncorrected estimates in the manuscript
-# Write up final results
-# Update Notes for figures
 # Write translational abstract
+# Update OSF + GitHub links
 
 # Set up ------------------------------------------------------------------
 library(ggplot2)
@@ -1255,7 +1253,6 @@ ggplot(data = df_summary,
     color = "blue",
     linetype = "dashed"
   )
-  
 dev.off()
 
 # Median bias
@@ -1317,7 +1314,6 @@ ggplot(data = df_summary,
     linetype = "dashed"
   )
 dev.off()
-
 
 #===========================================================================#
 ########################## FIGURE 8: BIAS-VARIANCE ########################## 
@@ -1401,12 +1397,15 @@ dev.off()
 ################ FIGURE 9: MSE CONDITIONAL ON STOPPING TIME #################### 
 #==============================================================================#
 
-sub = df %>% filter(proc != "Fixed" & d_forpower == d_actual) %>% 
+sub = df %>% 
+  filter(proc != "Fixed" & d_forpower == d_actual) %>% 
   group_by(proc, facet, segment, d_actual) %>% 
-  summarize(mse = mean((ES_corrected - d_actual)^2)) %>% ungroup() %>% 
+  summarize(mse = mean((ES_corrected - d_actual)^2)) %>% 
+  ungroup() %>% 
   select(proc, facet, segment, mse) %>% 
   bind_rows(
-    df %>% filter(proc != "Fixed" & d_forpower == d_actual) %>%
+    df %>% #calculate overall MSE (not conditional on segment)
+      filter(proc != "Fixed" & d_forpower == d_actual) %>%
       group_by(proc, facet) %>% 
       summarize(mse = mean((ES_corrected - d_actual)^2)) %>% 
       mutate(segment = rep(4))) #%>% 
@@ -1422,8 +1421,11 @@ names(facet.label) = c(1, 2, 3, 4, 5)
 tiff(file="figures/figure9.tiff",width=2000,height=1500, units = "px", res = 300)
 ggplot(data = sub, mapping = aes(x = as.factor(segment), y = mse)) +
   facet_wrap(vars(facet), labeller = labeller(facet = facet.label), nrow = 2) +
-  geom_segment(aes(x = segment, xend = segment, y = 0, yend = mse),
-               color = "red", linetype = "dashed") +
+  geom_segment(
+    aes(x = segment, xend = segment, y = 0, yend = mse),
+    color = "red",
+    linetype = "dashed"
+    ) +
   geom_point() +
   theme_bw() +
   theme(strip.background =element_rect(fill="white")) +
