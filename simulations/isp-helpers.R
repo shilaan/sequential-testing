@@ -1,23 +1,21 @@
 ####ISP Engine provided by Ulrich & Miller at https://github.com/milleratotago/Independent_Segments_R
 
-#setwd("/Users/shilaan/Library/Mobile Documents/com~apple~CloudDocs/PhD/ISP")
-
 # Class SegmentedHypTestEngine
 
-# Runs (computes the proababilistic results of) complete segmented hypothesis testing scenarios
+# Runs (computes the probabilistic results of) complete segmented hypothesis testing scenarios
 
-#########################################################################################################
+##########################################
 # Creation methods - following Wickham
-#########################################################################################################
-#========================================================================================================
+##########################################
+#=========================================
 # new_SegmentedHypTestEngine
-#========================================================================================================
+#=========================================
+
 new_SegmentedHypTestEngine <- function()
 {
   
   # No fields needed at creation
   new_SegmentedHypTestEngine <- list()
-  
   
   attr(new_SegmentedHypTestEngine, "class") <- "SegmentedHypTestEngine"
   
@@ -25,22 +23,22 @@ new_SegmentedHypTestEngine <- function()
   return(new_SegmentedHypTestEngine)
   
 } # new_SegmentedHypTestEngine
-#========================================================================================================
+#=========================================
 
-#========================================================================================================
+#=========================================
 # validate_SegmentedHypTestEngine
-#========================================================================================================
+#=========================================
 # Checks additional properties of elements, for example, that values are in allowed ranges -- business rules
 validate_SegmentedHypTestEngine <- function(segmented_hyp_test_engine)
 {
   # More elaborate checking in here if needed. Stop if things go wrong.
   
 } # end validate_SegmentedHypTestEngine
-#========================================================================================================
+#=========================================
 
-#========================================================================================================
+#=========================================
 # SegmentedHypTestEngine - Public ctor
-#========================================================================================================
+#=========================================
 #-----------------
 # Roxygen comments
 
@@ -65,16 +63,16 @@ SegmentedHypTestEngine <- function()
   return(instance)
   
 } # end SegmentedHypTestEngine ctor
-#========================================================================================================
+#=========================================
 
 
-#########################################################################################################
+##########################################
 # Public methods
-#########################################################################################################
+##########################################
 #' @export
-#========================================================================================================
+#=========================================
 # print.SegmentedHypTestEngine: System will dispatch to this method on print(instance)
-#========================================================================================================
+#=========================================
 print.SegmentedHypTestEngine <- function(x, ...)
 {
   data_values <- unclass(x) # This grabs the original list from the struct built when attr was called
@@ -82,15 +80,14 @@ print.SegmentedHypTestEngine <- function(x, ...)
   print(df)
 }
 
-
-#========================================================================================================
+#=========================================
 # run_scenario: Top-level wrapper for running a complete scenario.
 #
 # Accepts researcher, statistical procedure and list (must be a list) of TrueEffect instances. Each TrueEffect
 # hold size and baserate probability. A TrueEffect with size 0 (i.e. H0 is true) may be included.
 # Probabilities across all effect sizes must sum to 1. A single SegmentedResult object is returned, which is the
 # average across all effect sizes, weighted by associated probability.
-#========================================================================================================
+#=========================================
 #-----------------
 # Roxygen comments
 
@@ -206,12 +203,12 @@ average_power.SegmentedHypTestEngine <- function(segmented_hyp_test_engine,
   
 } # end average_power
 
-#########################################################################################################
+##########################################
 # Internal Methods
-#########################################################################################################
-#========================================================================================================
+##########################################
+#=========================================
 # outcome_probabilities
-#========================================================================================================
+#=========================================
 
 # This method computes the probability of each outcome (reject, fail to reject, or continue) at each
 # of kmax stages for a given experimental scenario. See Miller & Ulrich, 2020, esp. Figures 2A and 2B for further
@@ -289,9 +286,9 @@ outcome_probabilities <- function(max_n_segments,pr_beat_strong,pr_beat_weak)
   
 } # end outcome_probabilities
 
-#========================================================================================================
+#=========================================
 # run_int_subjects_scenario: Run scenario with an integer number of subjects
-#========================================================================================================
+#=========================================
 
 # This method generates a description of the probabalistic results of a single segmented
 # hypothesis testing scenario for a given "researcher" (alphaweak,alphastrong and kmax),
@@ -429,10 +426,10 @@ run_int_subjects_scenario  <- function(segmented_researcher, stat_procedure, tru
   
 } # end run_int_subjects_scenario
 
-#========================================================================================================
+#=========================================
 # run_any_subjects_scenarioL Run scenario with integer or real number of subjects. Wrapper for
 # run_int_subjects_scenario
-#========================================================================================================
+#=========================================
 # This function handles cases in which Researcher.NperSegment is a real number (i.e., need not be an integer). In that
 # case, the scenario is simulated once with the floor and once with the ceiling of NperSegment, and the weighted average
 # of those two results is returned. Weighting based on fractional part of original NPerSegment. For example, if nPerSegment
@@ -484,11 +481,11 @@ run_any_subjects_scenario <- function(segmented_researcher, stat_procedure, true
   return(result)
 } # end run_any_subjects_scenario
 
-#========================================================================================================
+#=========================================
 # Accepts a list of SegmentedHypTestResults and a parallel list of probabilities.
 # Returns a SegmentedHypTestResult instance whose values are the weighted (by prob)
 # average of the input objects.
-#========================================================================================================
+#=========================================
 weighted_avg_hyp_test_result <- function(results_list, probs_list)
 {
   if (length(results_list) != length(probs_list)){
@@ -560,9 +557,9 @@ weighted_avg_hyp_test_result <- function(results_list, probs_list)
 } # end weighted_avg_hyp_test_result
 
 
-#########################################################################################################
+##########################################
 # Generics for public-facing methods
-#########################################################################################################
+##########################################
 #-----------------
 # Roxygen comments
 
@@ -777,12 +774,12 @@ SegmentedHypTestResult <- function(max_n_segments,
 }
 
 
-#####################################################################
+##########################################
 # Public methods
-#####################################################################
-#========================================================================================================
+##########################################
+#=========================================
 # print.SegmentendHypTestResult: System will dispatch to this method on print(instance)
-#========================================================================================================
+#=========================================
 #' @export
 print.SegmentedHypTestResult <- function(x, ...)
 {
@@ -797,11 +794,6 @@ print.SegmentedHypTestResult <- function(x, ...)
   print(df)
 }
 
-
-
-
-
-
 # For maximum ease of access, these end-user facing methods are not contained
 # in a class, so they need no generics or class instance for dispatch.
 # Top level methods for non-programming users.
@@ -814,9 +806,9 @@ placeholder <- function()
 {
 }
 
-###########################################################################################
+##########################################
 # alpha_weak: User-facing wrapper for alpha_weak_computation
-###########################################################################################
+##########################################
 #-----------------
 # Roxygen comments
 
@@ -850,9 +842,9 @@ alpha_weak <- function(max_n_segments, alpha_total, alpha_strong)
   return(alpha_weak)
 }
 
-###########################################################################################
+##########################################
 # n_for_power: User-facing wrapper for n_for_power_computation
-###########################################################################################
+##########################################
 
 #-----------------
 # Roxygen comments
@@ -1195,10 +1187,10 @@ search_kmax <- function(alpha_total,
 #####################
 # Internal methods
 #####################
-#========================================================================================================
+#=========================================
 # stat_procedure_factory: Accepts string from {'1t', '2t', '1z', '2z', 'r'}. Returns initialised objects
 # instance from StatProcedure family.
-#========================================================================================================
+#=========================================
 stat_procedure_factory <- function(stat_procedure_name)
 {
   stat_names <- c("1t", "2t", "1z", "2z", "r")
@@ -1287,9 +1279,9 @@ n_for_power_computation <- function(target_power, segmented_researcher, stat_pro
 
 
 
-#########################################################################################################
+##########################################
 # Class properties
-#########################################################################################################
+##########################################
 # Passed in to constructor
 
 #   max_n_segments: Maximum number of segments to test.
@@ -1299,12 +1291,12 @@ n_for_power_computation <- function(target_power, segmented_researcher, stat_pro
 #   alpha_weak:     Stop sampling Maximum p value for observed results in each segment. Computed if not provided
 
 
-#########################################################################################################
+##########################################
 # Creation methods - following Wickham
-#########################################################################################################
-#========================================================================================================
-# new_SegmentedResearcher: Default values determined emperically. Users are advised to override.
-#========================================================================================================
+##########################################
+#=========================================
+# new_SegmentedResearcher: Default values determined empirically. Users are advised to override.
+#=========================================
 # Low-level constructor
 new_SegmentedResearcher <- function(max_n_segments = 3,
                                     n_per_segment = 50,
@@ -1326,11 +1318,11 @@ new_SegmentedResearcher <- function(max_n_segments = 3,
   return(new_seg_res)
   
 } # new_SegmentedResearcher
-#========================================================================================================
+#=========================================
 
-#========================================================================================================
+#=========================================
 # validate_SegmentedResearcher
-#========================================================================================================
+#=========================================
 # Checks additional properties of elements, for example, that values are in allowed ranges -- business rules
 validate_SegmentedResearcher <- function(segmented_researcher)
 {
@@ -1367,16 +1359,16 @@ validate_SegmentedResearcher <- function(segmented_researcher)
   return(segmented_researcher)
   
 } # end validate_SegmentedResearcher
-#========================================================================================================
+#=========================================
 
 
-#========================================================================================================
+#=========================================
 # SegmentedResearcher - public-facing ctor
-#========================================================================================================
+#=========================================
 #-----------------
 # Roxygen comments
 
-#' SegmentedResearcher Cosntructor
+#' SegmentedResearcher Constructor
 #'
 #' A SegmentedResearcher instance holds a collection of values which
 #' define a specific research scenario.
@@ -1423,15 +1415,15 @@ SegmentedResearcher <- function(max_n_segments = 3,
   return(valid_instance)
   
 } # end SegmentedResearcher
-#========================================================================================================
+#=========================================
 
 
-#########################################################################################################
+##########################################
 # Public methods
-#########################################################################################################
-#========================================================================================================
+##########################################
+#=========================================
 # print.SegmentedResearcher: System will dispatch to this method on print(instance)
-#========================================================================================================
+#=========================================
 #' @export
 print.SegmentedResearcher <- function(x, ...)
 {
@@ -1441,14 +1433,14 @@ print.SegmentedResearcher <- function(x, ...)
 }
 
 
-#########################################################################################################
+##########################################
 # Internal methods
-#########################################################################################################
-#========================================================================================================
+##########################################
+#=========================================
 # alpha_weaK_computation - For given values of max_n_segments and alpha_strong, compute the value of alpha_weak
 # that will give the desired overall value of alpha_total (total Type 1 error rate). See Miller & Ulrich, 2020
 # for detailed discussion.
-#========================================================================================================
+#=========================================
 alpha_weak_computation <- function(segmented_researcher, max_n_segments, alpha_total, alpha_strong, tolerance = 1e-8)
 {
   # Logically, alpha_strong can not be larger than alpha_total
@@ -1495,23 +1487,23 @@ alpha_weak_computation <- function(segmented_researcher, max_n_segments, alpha_t
 # following Miller & Ulrich 2020
 
 
-#########################################################################################################
+##########################################
 # Class properties: Values by definition for each child test, set in ctor
-#########################################################################################################
+##########################################
 
 # min_sample_n
 # display_abbrev
 # display_name
 
 
-#########################################################################################################
+##########################################
 # Creation methods (following Wickman)
-#########################################################################################################
+##########################################
 
-#========================================================================================================
+#=========================================
 # new_StatProcedureBase: Children will, in typical cases, provide hard-coded values for all fields.
 # Values for display_abbrev must match SegmentedHypTestEngine$stat_procedure_factory switch statement.
-#========================================================================================================
+#=========================================
 # Low-level constructor - following Wickman
 new_StatProcedureBase <- function(min_sample_n, display_abbrev, display_name)
 {
@@ -1527,12 +1519,11 @@ new_StatProcedureBase <- function(min_sample_n, display_abbrev, display_name)
   return(new_stat_procedure_base)
   
 } # new_StatProcedureBase
-#========================================================================================================
+#=========================================
 
-
-#========================================================================================================
+#=========================================
 # validate_StatProcedureBase
-#========================================================================================================
+#=========================================
 # Checks additional properties of elements, for example, that values are in allowed ranges -- business rules
 validate_StatProcedureBase <- function(stat_procedure_base)
 {
@@ -1541,12 +1532,12 @@ validate_StatProcedureBase <- function(stat_procedure_base)
   }
   
 } # end validate_StatProcedureBase
-#========================================================================================================
+#=========================================
 
 
-#========================================================================================================
+#=========================================
 # StatProcedureBase - Public ctor
-#========================================================================================================
+#=========================================
 #-----------------
 # Roxygen comments
 
@@ -1578,16 +1569,16 @@ StatProcedureBase <- function(min_sample_n, display_abbrev, display_name)
   return(instance)
   
 } # end StatProcedureBase ctor
-#========================================================================================================
+#=========================================
 
 
-#########################################################################################################
+##########################################
 # Class methods
-#########################################################################################################
+##########################################
 
-#========================================================================================================
+#=========================================
 # print.StatProcedureBase: System will dispatch to this method on print(instance)
-#========================================================================================================
+#=========================================
 #' @export
 print.StatProcedureBase <- function(x, ...)
 {
@@ -1598,80 +1589,80 @@ print.StatProcedureBase <- function(x, ...)
 
 
 # Remaining family methods are all abstract in the base type
-#========================================================================================================
+#=========================================
 # compute_power: Given a directional alpha, anticipated effect size and sample n, return power for the child test.
 # These have analytical solutions for each test. See children for details
-#========================================================================================================
+#=========================================
 compute_power.StatProcedureBase <- function(stat_procedure, alpha_one_tailed, effect_size, sample_n, critical_value = NULL)
 {
   # Abstract
 } # end compute_power
 
 
-#========================================================================================================
+#=========================================
 # p_level: Given an observed stat value and sample n, compute the p-level for the child test.
 # These are computed by selecting from the appropriate sampling distribution
-#========================================================================================================
+#=========================================
 p_level.StatProcedureBase <- function(stat_procedure, observed_stat, sample_n)
 {
   # Abstract
 } # end p_level
 
-#========================================================================================================
+#=========================================
 # critical_value: Given alpha and sample n, compute the critical value for the child test.
 # Determined by accessing the cumulative density function for the appropriate sampling distribution
-#========================================================================================================
+#=========================================
 critical_value.StatProcedureBase <- function(stat_procedure, alpha_one_tailed, sample_n)
 {
   # Abstract
 } # end critical_value
 
-#========================================================================================================
+#=========================================
 # noncentrality: Provides a measure of the extent to which the null hypothesis is false, determining the
 # true distribution from which the observed statistic is drawn. These have analytical solutions for each
 # test. See the child code.
-#========================================================================================================
+#=========================================
 noncentrality.StatProcedureBase <- function(stat_procedure, sample_n, effect_size)
 {
   # Abstract
 } # end noncentrality
 
-#========================================================================================================
+#=========================================
 # effect_size_from_stat: Measure of effect size derived from observed statistic value and n. These
 # have analytical solutiosn. See the child code.
-#========================================================================================================
+#=========================================
 effect_size_from_stat.StatProcedureBase <- function(stat_procedure, stat_value, sample_n)
 {
   # Abstract
 } # end effect_size_from_stat
 
-#========================================================================================================
+#=========================================
 # expected_significant_effect: Determines the expected (mean) effect size, if one considers only those
 # cases where the null hypothesis is reject (i.e. the observed stat is greater than the critical). For each
 # test, this is computed by integrating across stat * stat_density for all values above the critical
 # to obtain an expected (mean) value for that portion of the distribution, than dividing by the total area
 # under the curve to obtain the correct proportional value. See child code.
-#========================================================================================================
+#=========================================
 expected_significant_effect.StatProcedureBase <- function(stat_procedure, alpha_one_tailed, sample_n, effect_size)
 {
   # Abstract
 } # end expected_significant_effect
 
 
-#========================================================================================================
+#=========================================
 # expected_significant_effect_bounded: As for expected_significant_effect, above, but integrated only
 # over a region determined by two bounding alpha levels.
-#========================================================================================================
+#=========================================
 expected_significant_effect_bounded.StatProcedureBase <- function(stat_procedure, alpha_strong, alpha_weak, sample_n, effect_size)
 {
   # Abstract
 } # end expected_significant_effect
 
 
-#========================================================================================================
+#=========================================
 # divide_total_sample: Convert from n_per_segment (which is always the total subjects used per segment)
 # to n_per_group, depending on the number of groups the child test applies to.
-#========================================================================================================
+#=========================================
 divide_total_sample.StatProcedureBase <- function(stat_procedure, n_per_segment)
 {
   # Abstract
@@ -1679,14 +1670,14 @@ divide_total_sample.StatProcedureBase <- function(stat_procedure, n_per_segment)
 
 
 
-#######################################################################################################
+##########################################
 # Generics: Following the S3 method dispatch model. This causes each child instance to invoke its own
 # polymorphic method implementation. See Wickman and others for details of the function binding process.
-#######################################################################################################
+##########################################
 
-#========================================================================================================
+#=========================================
 # Generics -- inherited by child classes
-#========================================================================================================
+#=========================================
 #-----------------
 # Roxygen comments
 
@@ -1944,9 +1935,9 @@ OneSampleZ <- function(min_sample_n = 2, display_abbrev = "1z", display_name = '
 #################################
 # Instance methods
 #################################
-#========================================================================================================
+#=========================================
 # compute_power(alpha_one_tailed, effect_size, sample_n, critical_value = NULL)
-#========================================================================================================
+#=========================================
 #' @export
 compute_power.OneSampleZ <- function(stat_procedure, alpha_one_tailed, effect_size, sample_n, critical_value = NULL)
 {
@@ -1974,9 +1965,9 @@ compute_power.OneSampleZ <- function(stat_procedure, alpha_one_tailed, effect_si
 } # end compute_power
 
 
-#========================================================================================================
+#=========================================
 # p_level(one_sample_z, observed_stat, sample_n)
-#========================================================================================================
+#=========================================
 #' @export
 p_level.OneSampleZ <- function(stat_procedure, observed_stat, sample_n)
 {
@@ -1991,9 +1982,9 @@ p_level.OneSampleZ <- function(stat_procedure, observed_stat, sample_n)
   
 } # end p_level
 
-#========================================================================================================
+#=========================================
 # critical_value(one_sample_z, alpha_one_tailed, sample_n)
-#========================================================================================================
+#=========================================
 #' @export
 critical_value.OneSampleZ <- function(stat_procedure, alpha_one_tailed, sample_n)
 {
@@ -2011,9 +2002,9 @@ critical_value.OneSampleZ <- function(stat_procedure, alpha_one_tailed, sample_n
   
 } # end critical_value
 
-#========================================================================================================
+#=========================================
 # noncentrality(sample_n, effect_size)
-#========================================================================================================
+#=========================================
 #' @export
 noncentrality.OneSampleZ <- function(stat_procedure, sample_n, effect_size)
 {
@@ -2023,9 +2014,9 @@ noncentrality.OneSampleZ <- function(stat_procedure, sample_n, effect_size)
   
 } # end noncentrality
 
-#========================================================================================================
+#=========================================
 # effect_size_from_stat(stat_value, sample_n)
-#========================================================================================================
+#=========================================
 #' @export
 effect_size_from_stat.OneSampleZ <- function(stat_procedure, stat_value, sample_n)
 {
@@ -2035,9 +2026,9 @@ effect_size_from_stat.OneSampleZ <- function(stat_procedure, stat_value, sample_
   
 } # end effect_size_from_stat
 
-#========================================================================================================
+#=========================================
 # expected_significant_effect - See StatProcedureOneSampleT.R for explanation of logic
-#========================================================================================================
+#=========================================
 #' @export
 expected_significant_effect.OneSampleZ <- function(stat_procedure, alpha_one_tailed, sample_n, effect_size)
 {
@@ -2071,9 +2062,9 @@ expected_significant_effect.OneSampleZ <- function(stat_procedure, alpha_one_tai
   
 } # end expected_significant_effect
 
-#========================================================================================================
+#=========================================
 # expected_significant_effect_bounded - See StatProcedureOneSampleT.R for explanation of logic
-#========================================================================================================
+#=========================================
 #' @export
 expected_significant_effect_bounded.OneSampleZ <- function(stat_procedure, alpha_strong, alpha_weak, sample_n, effect_size)
 {
@@ -2105,9 +2096,9 @@ expected_significant_effect_bounded.OneSampleZ <- function(stat_procedure, alpha
 } # end expected_significant_effect_bounded
 
 
-#========================================================================================================
+#=========================================
 # divide_total_sample
-#========================================================================================================
+#=========================================
 #' @export
 divide_total_sample.OneSampleZ <- function(stat_procedure, n_per_segment)
 {
@@ -2130,20 +2121,20 @@ divide_total_sample.OneSampleZ <- function(stat_procedure, n_per_segment)
 #    proportion of studies.
 
 
-#########################################################################################################
+##########################################
 # Class properties
-#########################################################################################################
+##########################################
 #   effect_size:              Default = 0
 #   effect_size_probability:  Default = 1
-#########################################################################################################
+##########################################
 
 
-#########################################################################################################
+##########################################
 # Creation methods (following Wickham)
-#########################################################################################################
-#========================================================================================================
+##########################################
+#=========================================
 # new_TrueEffect - low-level ctor.
-#========================================================================================================
+#=========================================
 new_TrueEffect <- function(effect_size = 0, effect_size_probability = 1)
 {
   new_true_effect <- list(effect_size = effect_size,
@@ -2156,12 +2147,12 @@ new_TrueEffect <- function(effect_size = 0, effect_size_probability = 1)
   return(new_true_effect)
   
 } # new_TrueEffect
-#========================================================================================================
+#=========================================
 
 
-#========================================================================================================
+#=========================================
 # validate_TrueEffect - error checking for raw TrueEffect instance
-#========================================================================================================
+#=========================================
 validate_TrueEffect <- function(true_effect)
 {
   
@@ -2175,12 +2166,12 @@ validate_TrueEffect <- function(true_effect)
   }
   
 } # end validate_TrueEffect
-#========================================================================================================
+#=========================================
 
 
-#========================================================================================================
+#=========================================
 # TrueEffect - Public ctor
-#========================================================================================================
+#=========================================
 #-----------------
 # Roxygen comments
 
@@ -2222,15 +2213,15 @@ TrueEffect <- function(effect_size = 0, effect_size_probability = 1)
   return(instance)
   
 } # end TrueEffect ctor
-#========================================================================================================
+#=========================================
 
 
-#########################################################################################################
+##########################################
 # Public methods
-#########################################################################################################
-#========================================================================================================
+##########################################
+#=========================================
 # print.TrueEffect: System will dispatch to this method on print(instance)
-#========================================================================================================
+#=========================================
 #' @export
 print.TrueEffect <- function(x, ...)
 {
@@ -2303,9 +2294,9 @@ TwoSampleT <- function(min_sample_n = 4, display_abbrev = "2t", display_name = '
 #################################
 # Instance methods
 #################################
-#========================================================================================================
+#=========================================
 # compute_power(alpha_one_tailed, effect_size, sample_n, critical_value = NULL)
-#========================================================================================================
+#=========================================
 #-----------------
 # Roxygen comments
 
@@ -2353,9 +2344,9 @@ compute_power.TwoSampleT <- function(stat_procedure, alpha_one_tailed, effect_si
 } # end compute_power.TwoSampleT
 
 
-#========================================================================================================
+#=========================================
 # p_level(two_sample_t, observed_stat, sample_n)
-#========================================================================================================
+#=========================================
 #' @export
 p_level.TwoSampleT <- function(stat_procedure, observed_stat, sample_n)
 {
@@ -2376,9 +2367,9 @@ p_level.TwoSampleT <- function(stat_procedure, observed_stat, sample_n)
   
 } # end p_level
 
-#========================================================================================================
+#=========================================
 # critical_value(two_sample_t, alpha_one_tailed, sample_n)
-#========================================================================================================
+#=========================================
 #' @export
 critical_value.TwoSampleT <- function(stat_procedure, alpha_one_tailed, sample_n)
 {
@@ -2399,9 +2390,9 @@ critical_value.TwoSampleT <- function(stat_procedure, alpha_one_tailed, sample_n
   
 } # end critical_value
 
-#========================================================================================================
+#=========================================
 # noncentrality(sample_n, effect_size)
-#========================================================================================================
+#=========================================
 #' @export
 noncentrality.TwoSampleT <- function(stat_procedure, sample_n, effect_size)
 {
@@ -2416,9 +2407,9 @@ noncentrality.TwoSampleT <- function(stat_procedure, sample_n, effect_size)
   
 } # end noncentrality
 
-#========================================================================================================
+#=========================================
 # effect_size_from_stat(stat_value, sample_n)
-#========================================================================================================
+#=========================================
 #' @export
 effect_size_from_stat.TwoSampleT <- function(stat_procedure, stat_value, sample_n)
 {
@@ -2434,9 +2425,9 @@ effect_size_from_stat.TwoSampleT <- function(stat_procedure, stat_value, sample_
   
 } # end effect_size_from_stat
 
-#========================================================================================================
+#=========================================
 # expected_significant_effect
-#========================================================================================================
+#=========================================
 #' @export
 expected_significant_effect.TwoSampleT <- function(stat_procedure, alpha_one_tailed, sample_n, effect_size)
 {
@@ -2472,9 +2463,9 @@ expected_significant_effect.TwoSampleT <- function(stat_procedure, alpha_one_tai
   return(expected_effect_size)
 } # end expected_significant_effect
 
-#========================================================================================================
+#=========================================
 #expected_significant_effect_bounded
-#========================================================================================================
+#=========================================
 #' @export
 expected_significant_effect_bounded.TwoSampleT <- function(stat_procedure, alpha_strong, alpha_weak, sample_n, effect_size)
 {
@@ -2515,9 +2506,9 @@ expected_significant_effect_bounded.TwoSampleT <- function(stat_procedure, alpha
   
 } # end expected_significant_effect_bounded
 
-#========================================================================================================
+#=========================================
 # divide_total_sample
-#========================================================================================================
+#=========================================
 #' @export
 divide_total_sample.TwoSampleT <- function(stat_procedure, n_per_segment)
 {

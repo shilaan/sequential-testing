@@ -21,7 +21,7 @@ author_note: |
 abstract: >
   Sequential analysis allows researchers to perform well-powered experiments with smaller sample sizes. I outline the commonalities and differences between three sequential hypothesis testing procedures: group-sequential designs, the sequential Bayes Factor, and the Independent Segments Procedure. I illustrate how these sequential procedures can be implemented in a group-wise manner, and present two trade-offs of importance to the procedures: long-run error control vs. short-run evidence and efficiency in hypothesis testing vs. accuracy in parameter estimation. Using Monte Carlo simulations, I compare the performance of the procedures in terms of their error control (i.e., false-negative and false-positive decision rates), efficiency (i.e., reduction in required sample size), and accuracy (i.e., bias and variance in effect size estimation). I find that effect size estimates stemming from the Independent Segments Procedure are highly inaccurate, and systematically exclude the true population effect size. I conclude with practical recommendations for researchers who wish to utilize the benefits of sequential hypothesis testing while retaining their ability to obtain a credible effect size estimate. 
   
-keywords          : "sequential analysis, hypothesis testing, efficiency, estimation, bias"
+keywords          : "sequential analysis, hypothesis testing, efficiency, error rates, parameter estimation, sample size"
 wordcount         : "11,368"
   
 bibliography      : ["references.bib","r-refs.bib"]
@@ -57,7 +57,7 @@ library(TOSTER)
 library(BFDA)
 
 r_refs(file = "r-refs.bib") #update later
-default_plot_hook = knitr::knit_hooks$get('plot') 
+default_plot_hook <- knitr::knit_hooks$get('plot') 
 
 knitr::knit_hooks$set(plot = function(x, options) { #function to prevent pandoc issues when plotting
   default_md <- default_plot_hook(x, options)
@@ -99,8 +99,12 @@ isp_power <-
     )$power
 
 gs  <- function(proc, return = "n") {
-  bs = ifelse(proc == "asOF", "bsOF", "bsP") #specify beta-spending function
-  if(proc == "asOF") {rates = c(0.50, 0.75, 1)} else{rates = c(1/3, 2/3, 1)} #specify information rates for OBF vs Pocock
+  bs <- ifelse(proc == "asOF", "bsOF", "bsP") #specify beta-spending function
+  if(proc == "asOF") {
+    rates = c(0.50, 0.75, 1)
+    } else{
+      rates = c(1/3, 2/3, 1)
+      } #specify information rates for OBF vs Pocock
  
   # Specify the design
   design = getDesignGroupSequential(
@@ -116,13 +120,24 @@ gs  <- function(proc, return = "n") {
   
   # Get parameters
   parameters <- getSampleSizeMeans(design = design, groups = 2, alternative = 0.5)
-  n_gs = ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
+  n_gs <- ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
   alpha <- parameters$criticalValuesPValueScale
   futility <- parameters$futilityBoundsPValueScale %>% round(2)
   
-  if(return == "alpha") {return(alpha %>% signif(2) %>% as.character() %>% sub(".", "", .,))}
+  if(return == "alpha") {
+    return(
+      alpha %>% 
+        signif(2) %>% 
+        as.character() %>% 
+        sub(".", "", .,))
+    }
   if(return == "n") {return(n_gs)}
-  if(return == "futility") {return(futility %>% as.character() %>% sub(".", "", .,))}
+  if(return == "futility") {
+    return(
+      futility %>% 
+        as.character() %>% 
+        sub(".", "", .,))
+    }
 }
 
 n_p <- gs(proc = "asP")[1]
@@ -407,7 +422,7 @@ Our sequential procedures are performing as expected, providing an appealing inc
 
 Figure 6 shows the empirical distribution of effect size estimates, along with the available bias-adjusted estimates, stemming from the five hypothesis testing procedures when the true effect size $\delta$ = 0.5. Effect size estimates stemming from the fixed sample hypothesis test are, as expected, normally distributed around the true effect size ($\delta$ = 0.5). As we can see, the distribution of effect size estimates stemming from the sequential procedures have a somewhat odd shape. This is to be expected [see, for example, @goodman2007]. The distribution of observed effects is more spread out for the sequential procedures because the experiments that stopped early have smaller sample sizes and higher variability in effect size estimates. In addition, we observe left-tailed peaks in the distribution of observed effect sizes. This is a consequence of those experiments that stopped early with a decision to support the null (i.e., False Negative results). 
 
-For the group-sequential designs, we can see that the available median-unbiased estimators provide a great improvement over the naive (Cohen's *d*) estimator. For both the Pocock-like and the O'Brien-Fleming-like designs, the bias-adjusted effect size estimate is very close to the true population effect size: *d* = 0.49 compared to $\delta$ = 0.50. For the SBF procedure, we see that the using the mean of the posterior distribution (which shrinks the effect size estimate in earlier terminations) also provides a slight improvement in parameter estimation (by reducing the estimated effect size from *d* = 0.57 to *d* = 0.55).  The bias in the median effect size estimate of the ISP, however, is severe (*d* = 0.66; an exaggeration ratio of 1.33). This biased estimate remains uncorrected due to the absence of a bias-adjusted estimator accompanying the ISP. A we can see, the distribution of effect size estimates stemming from the ISP is bimodal.
+For the group-sequential designs, we can see that the available median-unbiased estimators provide a great improvement over the naive (Cohen's *d*) estimator. For both the Pocock-like and the O'Brien-Fleming-like designs, the bias-adjusted effect size estimate is very close to the true population effect size: *d* = 0.49 compared to $\delta$ = 0.50. For the SBF procedure, we see that the using the mean of the posterior distribution (which shrinks the effect size estimate in earlier terminations) also provides a slight improvement in parameter estimation (by reducing the estimated effect size from *d* = 0.57 to *d* = 0.55).  The bias in the median effect size estimate of the ISP, however, is severe (*d* = 0.66; an exaggeration ratio of 1.33). This biased estimate remains uncorrected due to the absence of a bias-adjusted estimator accompanying the ISP. As we can see, the distribution of effect size estimates stemming from the ISP is bimodal.
 
 To make sense of this result, we revisit Figure 3B. In the first and second segment of the ISP, the critical effect size (i.e., the effect size that needs to be observed to reject the null hypothesis) is *d* = 0.57. An effect $d \ge$ 0.57 leads to an early stop with a decision to reject the null hypothesis; an effect $d \le$ 0.16 leads to an early stop with a decision not to reject the null hypothesis. An observed effect size 0.16 $\le$ *d* < 0.57 is considered inconclusive, after which the data is discarded and a new batch of observations is collected. As a result, *effect sizes closest to the true population effect size are discarded*.  
 
@@ -515,9 +530,7 @@ We have learned that scientific experiments can require substantial time, money,
 ## *True Negative, False Positive, and Inconclusive Rate*
 
 ```{r include = F}
-#df <- read.csv("simulations/data.csv")
-
-df = df %>% 
+df <- df %>% 
   mutate(
     name = case_when(
       proc == "Fixed" ~ "Fixed",
@@ -529,23 +542,31 @@ df = df %>%
     name = fct_relevel(name, "Fixed", "Pocock", "O'Brien-Fleming", "Bayes", "ISP")
     )
 
-t1 = df %>% filter(d_forpower == d_actual) %>%
+t1 <- df %>% 
+  filter(d_forpower == d_actual) %>%
   group_by(name) %>% 
-  summarize(true_positive = mean(decision == "reject.null") %>% round(2),
-            inconclusive = mean(decision == "inconclusive") %>% round(2),
-            false_negative = mean(decision == "reject.alt") %>% round(2))
+  summarize(
+    true_positive = mean(decision == "reject.null") %>% round(2),
+    inconclusive = mean(decision == "inconclusive") %>% round(2),
+    false_negative = mean(decision == "reject.alt") %>% round(2)
+    )
 
-t2 = df %>% filter(d_actual == 0) %>% 
+t2 <- df %>% 
+  filter(d_actual == 0) %>% 
   group_by(name) %>% 
-  summarize(true_negative = mean(decision == "reject.alt") %>% round(2),
-            inconclusive = mean(decision == "inconclusive") %>% round(2),
-            false_positive = mean(decision == "reject.null") %>% round(2))
+  summarize(
+    true_negative = mean(decision == "reject.alt") %>% round(2),
+    inconclusive = mean(decision == "inconclusive") %>% round(2),
+    false_positive = mean(decision == "reject.null") %>% round(2)
+    )
 ```
 
 ```{r, echo = FALSE}
-knitr::kable(t2, 
-             col.names = c("Procedure", "True Negative", "Inconclusive", "False Positive"), 
-             align = "lccc")
+knitr::kable(
+  t2, 
+  col.names = c("Procedure", "True Negative", "Inconclusive", "False Positive"), 
+  align = "lccc"
+  )
 ```
 
 *Note.* Error rates of the procedures when the true population effect size $\delta$ = 0. 
@@ -556,9 +577,11 @@ knitr::kable(t2,
 ## *True Positive, False Negative, and Inconclusive Rate*
 
 ```{r, echo = FALSE}
-knitr::kable(t1, 
-             col.names = c("Procedure", "True Positive", "Inconclusive", "False Negative"), 
-             align = "lccc")
+knitr::kable(
+  t1, 
+  col.names = c("Procedure", "True Positive", "Inconclusive", "False Negative"), 
+  align = "lccc"
+  )
 ```
 
 *Note.* Error rates of the procedures when the true population effect size $\delta$ = 0.5. 
@@ -569,13 +592,20 @@ knitr::kable(t1,
 ## *Average Sample Size Required*
 
 ```{r, echo = FALSE}
-E_n = df %>% 
+E_n <- df %>% 
   group_by(name, d_actual) %>% 
   summarize(E_n = mean(n_cumulative)) %>% 
   rename(Procedure = name) 
 
-t3 = E_n %>% mutate(E_n = E_n %>% round()) %>% 
-  pivot_wider(names_from = d_actual, names_prefix = "*d* = ", values_from = E_n) 
+t3 <- E_n %>%
+  mutate(
+    E_n = E_n %>% round()
+    ) %>% 
+  pivot_wider(
+    names_from = d_actual, 
+    names_prefix = "*d* = ", 
+    values_from = E_n
+    )
 
 knitr::kable(t3)
 ```
@@ -597,7 +627,9 @@ df_long <- df %>%
 
 median <- df_long %>% 
   group_by(name, d_actual, ES_type) %>% 
-  summarize(medianES = round(median(ES), 2)) %>% 
+  summarize(
+    medianES = round(median(ES), 2)
+    ) %>% 
   rename(Procedure = name) %>% 
   filter(!((ES_type == "ES_corrected") & (Procedure == "Fixed" | Procedure == "ISP"))) %>% 
   rowwise() %>% 
@@ -611,15 +643,12 @@ median <- df_long %>%
   select(name, d_actual, medianES) %>% 
   rename(Procedure = name)
   
-
 t4 <- median %>% 
   pivot_wider(
     names_from = d_actual, 
     names_prefix = "*d* = ", 
     values_from = medianES
     )
-
-t4
 ```
 
 ```{r, echo = FALSE}

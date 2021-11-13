@@ -13,16 +13,21 @@ library(NCmisc)
 library(here)
 
 ########################## GLOBAL HELPER FUNCTIONS ##########################
-generate_data = function(nsims, n, d) { 
+generate_data <- function(nsims, n, d) { 
   # Generate raw data
-  raw = lapply(1:nsims, function(i) {
-    data.table(nsim = i, n = n, d = d,
-               m2 = rnorm(n = n, mean = 0),
-               m1 = rnorm(n = n, mean = 0) + d)})
+  raw <- lapply(1:nsims, function(i) {
+    data.table(
+      nsim = i, 
+      n = n, 
+      d = d,
+      m2 = rnorm(n = n, mean = 0),
+      m1 = rnorm(n = n, mean = 0) + d
+      )}
+    )
   data.table::rbindlist(raw)
 }
 
-run_tests = function(df, n, proc, segment = 1, alpha) {
+run_tests <- function(df, n, proc, segment = 1, alpha) {
   
   # Run t-tests and create data-frame
   df %>% 
@@ -44,33 +49,35 @@ run_tests = function(df, n, proc, segment = 1, alpha) {
 } 
 
 ########################## GLOBAL PARAMETERS ##########################
-max_n_segments = 3
-alpha_total = 0.05
-target_power = 0.8 #might also add 0.9
-d_forpower = 0.5
+max_n_segments <- 3
+alpha_total <- 0.05
+target_power <- 0.8 
+d_forpower <- 0.5
 
 ########################## FULL PROCEDURE FUNCTION ##########################
 
-run_all_procedures = function(nsims){
+run_all_procedures <- function(nsims){
   
   ########################## FIXED SAMPLING PROCEDURE FUNCTION ########################## 
   
-  run_fixed = function(d_actual) {
+  run_fixed <- function(d_actual) {
     
     ########################## FIXED SAMPLE ##########################
     
     # Calculate fixed n per group for the one-tailed two-sample t-test
-    n_fixed = ceiling(
+    n_fixed <- ceiling(
       power.t.test(
         delta = d_forpower, 
         sig.level = alpha_total, 
         power = target_power, 
         type = "two.sample", 
-        alternative = "one.sided")$n)
+        alternative = "one.sided"
+        )$n
+      )
     
     # RUN FIXED SAMPLE NHST
     set.seed(1234*(d_forpower*target_power))
-    fixed = generate_data(
+    fixed <- generate_data(
       nsims = nsims,
       n = n_fixed, 
       d = d_actual
@@ -90,38 +97,44 @@ run_all_procedures = function(nsims){
         )
     
     # RUN EQUIVALENCE TEST
-    eq_bounds = powerTOSTtwo(
-      alpha = alpha_total, #set bounds
+    eq_bounds <- powerTOSTtwo(
+      alpha = alpha_total, 
       statistical_power = target_power,
-      N = n_fixed)
+      N = n_fixed
+      ) #set bounds
     
-    eq_tests = fixed %>% 
+    eq_tests <- fixed %>% 
       split(.$nsim) %>%
-      map(~ TOSTtwo(
-        m1 = .$m1,
-        m2 = .$m2,
-        sd1 = .$sd1,
-        sd2 = .$sd2,
-        n1 = .$n,
-        n2 = .$n,
-        low_eqbound_d = eq_bounds[1],
-        high_eqbound_d = eq_bounds[2],
-        alpha = alpha_total,
-        var.equal = T,
-        verbose = F,
-        plot = F)
+      map(
+        ~ TOSTtwo(
+          m1 = .$m1,
+          m2 = .$m2,
+          sd1 = .$sd1,
+          sd2 = .$sd2,
+          n1 = .$n,
+          n2 = .$n,
+          low_eqbound_d = eq_bounds[1],
+          high_eqbound_d = eq_bounds[2],
+          alpha = alpha_total,
+          var.equal = T,
+          verbose = F,
+          plot = F
+          )
         ) %>% 
       data.table::rbindlist() %>% 
       rowwise() %>% 
       mutate(outcome = max(TOST_p1, TOST_p2) <= alpha_total)
     
     # Create final data-frame
-    fixed = fixed %>% 
+    fixed <- fixed %>% 
       mutate(equivalence = eq_tests$outcome) %>% 
-      mutate(decision = ifelse(
-        p <= alpha, "reject.null", 
-        ifelse(equivalence == TRUE, "reject.alt",
-               "inconclusive"))) 
+      mutate(
+        decision = ifelse(
+          p <= alpha, "reject.null", 
+          ifelse(equivalence == TRUE, 
+                 "reject.alt",
+                 "inconclusive"))
+        ) 
     
     data.table(fixed)[, .(id, 
                           proc, 
@@ -140,48 +153,52 @@ run_all_procedures = function(nsims){
   ########################## RUN FIXED SAMPLING PROCEDURE ##########################
   
   ########################## SET PARAMETERS ##########################
-  d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
+  d_actual <- c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
   
   ########################## PARALELLELIZE ##########################
-  
-  dt <- mclapply(1:length(d_actual), 
-                 function(i) run_fixed(d_actual[i]),
-                 mc.cores = 2)
+  dt <- mclapply(
+    1:length(d_actual), 
+    function(i) run_fixed(d_actual[i]),
+    mc.cores = 2
+    )
   print("The fixed sampling procedure has finished running!")
   
-  fixed = data.table::rbindlist(dt)
+  fixed <- data.table::rbindlist(dt)
   
   ########################## GROUP-SEQUENTIAL PROCEDURE FUNCTION ########################## 
   
   #  FUNCTION WITH BIAS ADJUSTMENT AND ADJUSTED INFORMATION RATES FOR O'BRIEN-FLEMING #  
-  run_group_sequential = function(proc, d_actual) {
+  run_group_sequential <- function(proc, d_actual) {
     
     if(proc == "asOF") {design = design_obf} else{design = design_pocock}
     if(proc == "asOF") {parameters = parameters_obf} else{parameters = parameters_pocock}
     
-    ns = ceiling(c(parameters$numberOfSubjects[1], 
-                   diff(parameters$numberOfSubjects))/2) # n per look per group
-    alpha = parameters$criticalValuesPValueScale
-    futility = parameters$futilityBoundsPValueScale
+    ns <- ceiling(c(parameters$numberOfSubjects[1], 
+                    diff(parameters$numberOfSubjects))/2) # n per look per group
+    alpha <- parameters$criticalValuesPValueScale
+    futility <- parameters$futilityBoundsPValueScale
     
     # Run all data in batches
     set.seed(1234*(d_forpower*target_power))
-    l = lapply(1:length(ns), 
-               function(i){generate_data(nsims = nsims, 
-                                         n = ns[i], 
-                                         d = d_actual)})
+    l <- lapply(
+      1:length(ns), 
+      function(i){generate_data(
+        nsims = nsims, 
+        n = ns[i], 
+        d = d_actual)}
+      )
     
-    df = data.table::rbindlist(l)[order(nsim)] %>% 
+    df <- data.table::rbindlist(l)[order(nsim)] %>% 
       mutate(
         segment = rep(
-          lapply(1:length(ns), 
+          lapply(1:length(ns),
                  function(i) {rep(i, times = ns[i])}) %>%  
             unlist(), 
-        nsims)
+          nsims)
         )
     
     # Run tests
-    tests = lapply(1:length(ns), function(i){
+    tests <- lapply(1:length(ns), function(i){
       df %>% 
         group_by(nsim) %>% 
         filter(segment %in% 1:i) %>% #get data of all segments up to i 
@@ -227,7 +244,7 @@ run_all_procedures = function(nsims){
       slice_head()
     
     #Get bias corrected ES estimate - first split data into individual segments
-    raw_data = lapply(1:length(ns), function(i){
+    raw_data <- lapply(1:length(ns), function(i){
       df %>% 
         group_by(nsim) %>% 
         filter(segment == i) %>% #get data by individual segments
@@ -241,7 +258,8 @@ run_all_procedures = function(nsims){
             segment == 1 ~ ns[1],
             segment == 2 ~ ns[2],
             segment == 3 ~ ns[3]
-            ))
+            )
+          )
     }) %>% 
       data.table::rbindlist() %>% 
       arrange(nsim) %>% 
@@ -253,25 +271,29 @@ run_all_procedures = function(nsims){
       filter(segment <= final_segment)
     
     # Get median unbiased estimate
-    ES_corrected = raw_data %>% 
+    ES_corrected <- raw_data %>% 
       split(.$nsim) %>% 
-      map(~ getDataset(
-        n1 = .$n,
-        n2 = .$n,
-        means1 = .$m1,
-        means2 = .$m2,
-        stDevs1 = .$sd1,
-        stDevs2 = .$sd2
-      )) %>% 
-      map(~ getFinalConfidenceInterval(
-        design = design,
-        dataInput = .x
-      )) %>%
+      map(
+        ~ getDataset(
+          n1 = .$n,
+          n2 = .$n,
+          means1 = .$m1,
+          means2 = .$m2,
+          stDevs1 = .$sd1,
+          stDevs2 = .$sd2
+          )
+        ) %>% 
+      map(
+        ~ getFinalConfidenceInterval(
+          design = design,
+          dataInput = .x
+          )
+        ) %>%
       map("medianUnbiased") %>% 
       unlist()
     
     # Create final data-frame
-    tests = tests %>% 
+    tests <- tests %>% 
       ungroup() %>% 
       mutate(
         id = nsim, 
@@ -301,9 +323,11 @@ run_all_procedures = function(nsims){
   
   ########################## SET PARAMETERS ##########################
   
-  get_design = function(proc) {
+  get_design <- function(proc) {
     bs = ifelse(proc == "asOF", "bsOF", "bsP") #Specify beta-spending function
-    if(proc == "asOF") {rates = c(0.50, 0.75, 1)} else{rates = c(1/3, 2/3, 1)} #specify information rates for Pocock vs OBF
+    if(proc == "asOF") {
+      rates = c(0.50, 0.75, 1)
+      } else{rates = c(1/3, 2/3, 1)} #specify information rates for Pocock vs OBF
     
     # Specify the design
     getDesignGroupSequential(
@@ -318,24 +342,25 @@ run_all_procedures = function(nsims){
       ) 
   }
   
-  get_parameters = function(design) {
+  get_parameters <- function(design) {
     # Get parameters
     parameters = getSampleSizeMeans(
       design = design, 
       groups = 2, 
-      alternative = d_forpower)
+      alternative = d_forpower
+      )
   }
   
-  # Get pocock design and parameters
-  design_pocock = get_design(proc = "asP")
-  parameters_pocock = get_parameters(design = design_pocock)
+  # Get Pocock design and parameters
+  design_pocock <- get_design(proc = "asP")
+  parameters_pocock <- get_parameters(design = design_pocock)
   
   # Get O'Brien-Fleming design and parameters
-  design_obf = get_design(proc = "asOF")
-  parameters_obf = get_parameters(design = design_obf)
+  design_obf <- get_design(proc = "asOF")
+  parameters_obf <- get_parameters(design = design_obf)
   
-  d_actual = rep(c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2)), 2)
-  proc = rep(c("asP", "asOF"), each = 8) 
+  d_actual <- rep(c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2)), 2)
+  proc <- rep(c("asP", "asOF"), each = 8) 
   
   ########################## PARALELLELIZE ##########################
   dt <- mclapply(1:length(d_actual), 
@@ -343,7 +368,7 @@ run_all_procedures = function(nsims){
                  mc.cores = 2)
   print("The group-sequential procedures have finished running!")
   
-  group_sequential = data.table::rbindlist(dt)
+  group_sequential <- data.table::rbindlist(dt)
   
   ############## INDEPENDENT SEGMENTS PROCEDURE FUNCTION ################ 
 
@@ -369,32 +394,37 @@ run_all_procedures = function(nsims){
   
   #find_alpha_weak(0.05, 3, .025) #returns .28
   
-  run_isp = function(d_actual) {
+  run_isp <- function(d_actual) {
     
     ########################## ISP ##########################
     
     # Calculate n per group per segment for the ISP
-    ns = ceiling(
+    ns <- ceiling(
       n_for_power(
         target_power, 
         stat_procedure_name = "2t", 
         effect_size = d_forpower, 
         max_n_segments, 
         alpha_total, 
-        alpha_strong))/2
+        alpha_strong)
+      )/2
     
     # Run all data in batches of minN
     set.seed(1234*(d_forpower*target_power))
-    l = lapply(1:max_n_segments, 
-               function(i){generate_data(nsims = nsims, 
-                                         n = ns, 
-                                         d = d_actual)})
+    l <- lapply(
+      1:max_n_segments, 
+      function(i){generate_data(
+        nsims = nsims, 
+        n = ns, 
+        d = d_actual
+        )}
+      )
     
-    df = data.table::rbindlist(l)[order(nsim)] %>% 
+    df <- data.table::rbindlist(l)[order(nsim)] %>% 
       mutate(segment = rep(rep(1:max_n_segments, each = ns), nsims))
     
     #Run hypothesis test
-    tests = lapply(1:max_n_segments, function(i){
+    tests <- lapply(1:max_n_segments, function(i){
       df %>% 
         group_by(nsim) %>% 
         filter(segment == i) %>% #get data by individual segments
@@ -429,7 +459,8 @@ run_all_procedures = function(nsims){
         power = target_power,
         sdpooled = sqrt((sd1^2 +sd2^2)/2),
         ES = (m1 - m2) / sdpooled, #ES estimate = Cohen's d 
-        ES_corrected = ES) %>% 
+        ES_corrected = ES
+        ) %>% 
       ungroup() 
     
     # Get final data frame
@@ -450,9 +481,11 @@ run_all_procedures = function(nsims){
   ########################## RUN INDEPENDENT SEGMENTS ##########################
   
   ########################## SET PARAMETERS ##########################
-  d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
-  alpha_strong = 0.025
-  alpha_weak= find_alpha_weak(alpha_total, max_n_segments, alpha_strong) #calculate alpha_weak for ISP
+  d_actual <- c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
+  alpha_strong <- 0.025
+  alpha_weak <- find_alpha_weak(alpha_total, 
+                                max_n_segments, 
+                                alpha_strong) #calculate alpha_weak for ISP
   
   ########################## PARALELLELIZE ##########################
   dt <- mclapply(1:length(d_actual), 
@@ -460,18 +493,18 @@ run_all_procedures = function(nsims){
                  mc.cores = 2)
   print("The Independent Segments Procedure has finished running!")
   
-  isp = data.table::rbindlist(dt)
+  isp <- data.table::rbindlist(dt)
   
   ############################################################################
   ######################### SEQUENTIAL BAYES FACTOR ########################## 
   ############################################################################
   
-  run_sbf = function() { 
+  run_sbf <- function() { 
     
-    df = lapply(1:length(d_actual), function(i){
+    df <- lapply(1:length(d_actual), function(i){
       BFDA.sim(
         expected.ES = d_actual[i], 
-        type="t.between",
+        type = "t.between",
         prior = list("normal", list(prior.mean = 0.5, prior.variance = 0.3)),
         n.min = 25, 
         n.max = 75, 
@@ -485,7 +518,7 @@ run_all_procedures = function(nsims){
         BFDA.analyze(boundary = 3) 
     }) 
     
-    df = df %>% 
+    df <- df %>% 
       map("endpoint") %>% 
       data.table::rbindlist() %>% 
       group_by(true.ES) %>%  
@@ -501,7 +534,8 @@ run_all_procedures = function(nsims){
           ),
         segment = n_cumulative/n,
         d_forpower = d_forpower,
-        power = target_power) %>% 
+        power = target_power
+        ) %>% 
       rowwise() %>% 
       mutate(
         ES_corrected = integrate( #ES_corrected = mean of posterior distribution 
@@ -531,31 +565,36 @@ run_all_procedures = function(nsims){
   
   ########################## SET PARAMETERS  ##########################
   source("simulations/bayes-helpers.R") # Helper functions obtained from the BFDA package and with very generous help from Angelika Stefan
-  d_actual = c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
+  d_actual <- c(seq(-0.2, 0.4, 0.2), 0.5, seq(0.6, 1, 0.2))
   
   dt <- mclapply(1:length(d_forpower), 
                  function(i) run_sbf(),
                  mc.cores = 2)
   print("The Sequential Bayes Factor has finished running!")
   
-  bayes = data.table::rbindlist(dt)
+  bayes <- data.table::rbindlist(dt)
   
   ########################## CREATE FINAL DATA-FRAME ##########################
   
-  df = bind_rows(fixed, group_sequential, isp, bayes)
+  df <- bind_rows(fixed, group_sequential, isp, bayes)
   return(df)
   
 }
 
 ########################## RUN ALL PROCEDURES ##########################
-system.time(dt <- mclapply(1, function(i) run_all_procedures(nsims = 10000),
-                           mc.cores = 2)) #10,000 sims take about 2.5-3 hours to run (2h40min)
+system.time(
+  dt <- mclapply(
+    1, 
+    function(i) run_all_procedures(nsims = 10000),
+    mc.cores = 2
+    )
+  ) #10,000 sims take about 2.5-3 hours to run (2h40min)
 
 system("say All your procedures have finished running!")
-df = data.table::rbindlist(dt)
+df <- data.table::rbindlist(dt)
 
 ########################## CREATE FINAL DATA-FRAME ##########################
 write.csv(df, "simulations/data.csv", row.names = F)
 
 ########################## READ IN DATA ##########################
-df = read.csv("simulations/data.csv")
+df <- read.csv("simulations/data.csv")

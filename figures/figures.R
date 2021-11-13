@@ -23,10 +23,10 @@ df <- df %>%
   )
 
 facet.label <- c("Fixed Hypothesis and Equivalence Test", 
-                "Sequential Bayes Factor", 
-                "Independent Segments Procedure", 
-                "Pocock-like GS design",
-                "O'Brien-Fleming-like GS design")
+                 "Sequential Bayes Factor", 
+                 "Independent Segments Procedure", 
+                 "Pocock-like GS design",
+                 "O'Brien-Fleming-like GS design")
 names(facet.label) <- c(1, 2, 3, 4, 5)
 
 #=============================================================================#
@@ -52,7 +52,7 @@ gs <- function(proc, return = "n") {
   
   # Get parameters
   parameters <- getSampleSizeMeans(design = design, groups = 2, alternative = 0.5)
-  n_gs = ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
+  n_gs <- ceiling(c(parameters$numberOfSubjects[1], diff(parameters$numberOfSubjects))/2) # n per look per group
   alpha <- parameters$criticalValuesPValueScale
   futility <- parameters$futilityBoundsPValueScale
   
@@ -93,6 +93,7 @@ futility_ofd <- round(
 d.plot <- function(n, alpha, t) {
   df <- 2*n-2
   critical_d <- round(qt(1-alpha, df = 2*n-2) * sqrt(2*(1/n)),2)
+  
   p <- ggplot(data.frame(x = c(-4, 4)), aes(x)) +
     stat_function(
       fun = dt, 
@@ -122,7 +123,6 @@ d.plot <- function(n, alpha, t) {
     geom_vline(xintercept = qt(1-alpha, df = df), linetype = 2, color = "grey") 
   return(p)
 }
-
 
 p1 <- d.plot(n = n_p, alpha = alpha_p[1], t = "Pocock (First Look)") +
   scale_x_continuous(
@@ -346,10 +346,18 @@ p3 <- d.plot(
     )
 
 tiff(file="figures/figure1a.tiff",width=2500,height=800, units = "px", res = 300)
-grid.arrange(p1, p2, p3, nrow = 1, 
-             left = textGrob("Density under H0: \u03b4 = 0", 
-                             rot = 90, hjust = 0.57,
-                             gp = gpar(fontsize = 10)))
+grid.arrange(
+  p1, 
+  p2, 
+  p3, 
+  nrow = 1, 
+  left = textGrob(
+    "Density under H0: \u03b4 = 0", 
+    rot = 90, 
+    hjust = 0.57,
+    gp = gpar(fontsize = 10)
+    )
+  )
 dev.off()
 
 
@@ -575,9 +583,18 @@ of3 <- d.plot(
 
 
 tiff(file="figures/figure1b.tiff",width=2500,height=800, units = "px", res = 300)
-grid.arrange(of1, of2, of3, nrow = 1,
-             left = textGrob("Density under H0: \u03b4 = 0", rot = 90, hjust = 0.57, 
-                             gp = gpar(fontsize = 10)))
+grid.arrange(
+  of1, 
+  of2, 
+  of3, 
+  nrow = 1,
+  left = textGrob(
+    "Density under H0: \u03b4 = 0", 
+    rot = 90, 
+    hjust = 0.57, 
+    gp = gpar(fontsize = 10)
+    )
+  )
 dev.off()
 
 #============================================================================#
@@ -701,37 +718,88 @@ dev.off()
   ggplot(mapping = aes(x = seq(xlim[1], xlim[2], length.out = 1000), 
                        y = posteriorLine)) +
     geom_line(size = 1) +
-    geom_line(mapping = aes(y = priorLine), linetype = "dashed", size = 1) + 
-    geom_point(mapping = aes(x = 0, y = .dprior(0, r)), 
-               size = 5, fill = "grey", shape = 21) + 
-    geom_point(mapping = aes(x = 0, y = posteriorLine[posteriorLine >0][1]),
-               size = 5, fill = "grey", shape = 21) +
+    geom_line(
+      mapping = aes(y = priorLine), 
+      linetype = "dashed", 
+      size = 1
+      ) + 
+    geom_point(
+      mapping = aes(x = 0, y = .dprior(0, r)), 
+      size = 5, 
+      fill = "grey", 
+      shape = 21
+      ) + 
+    geom_point(
+      mapping = aes(x = 0, y = posteriorLine[posteriorLine >0][1]),
+      size = 5, 
+      fill = "grey", 
+      shape = 21
+      ) +
     theme_classic() +
-    scale_x_continuous(breaks = xticks,
-                       labels = xlabels) +
-    scale_y_continuous(breaks = yticks,
-                       labels = ylabels,
-                       limits = c(min(yticks), max(yticks))) +
-    labs(x = expression(paste("Effect size ", delta)),
-         y = "Density") +
-    theme(text = element_text(size = 25),
-          axis.ticks.length = unit(.45, "cm")) +
-    annotate("text", x = xticks[2], y=ylim[2] - 0.3, size = 6,
-             label=label1, parse = TRUE) +
-    annotate("text", x = xticks[2], y=ylim[2], size = 6,
-             label=label2, parse = TRUE) +
-    geom_line(mapping = aes(x = c(xticks[length(xticks) - 2],
-                                  xticks[length(xticks) - 2] + 0.4),
-                            y = c(ylim[2] - 0.3, ylim[2] - 0.3)),
-              linetype = "dashed", size = 1) +
-    geom_line(mapping = aes(x = c(xticks[length(xticks) - 2],
-                                  xticks[length(xticks) - 2] + 0.4),
-                            y = c(ylim[2], ylim[2])),
-              size = 1) + 
-    annotate("text", x = xticks[length(xticks) -1], y = ylim[2] - 0.3,
-             label = "Prior", size = 6, hjust = 0) + 
-    annotate("text", x = xticks[length(xticks) - 1], y = ylim[2],
-             label = "Posterior", size = 6, hjust = 0)
+    scale_x_continuous(
+      breaks = xticks,
+      labels = xlabels
+      ) +
+    scale_y_continuous(
+      breaks = yticks,
+      labels = ylabels,
+      limits = c(min(yticks), max(yticks))
+      ) +
+    labs(
+      x = expression(paste("Effect size ", delta)),
+      y = "Density"
+      ) +
+    theme(
+      text = element_text(size = 25),
+      axis.ticks.length = unit(.45, "cm")
+      ) +
+    annotate(
+      "text",
+      x = xticks[2], 
+      y = ylim[2] - 0.3, 
+      size = 6,
+      label = label1, 
+      parse = TRUE
+      ) +
+    annotate(
+      "text", 
+      x = xticks[2], 
+      y = ylim[2], 
+      size = 6,
+      label = label2, 
+      parse = TRUE
+      ) +
+    geom_line(
+      mapping = aes(
+        x = c(xticks[length(xticks) - 2], xticks[length(xticks) - 2] + 0.4),
+        y = c(ylim[2] - 0.3, ylim[2] - 0.3)
+        ),
+      linetype = "dashed", 
+      size = 1
+      ) +
+    geom_line(
+      mapping = aes(
+        x = c(xticks[length(xticks) - 2], xticks[length(xticks) - 2] + 0.4),
+        y = c(ylim[2], ylim[2])
+        ),
+      size = 1
+      ) + 
+    annotate(
+      "text", 
+      x = xticks[length(xticks) -1], 
+      y = ylim[2] - 0.3,
+      label = "Prior", 
+      size = 6, 
+      hjust = 0
+      ) + 
+    annotate(
+      "text", 
+      x = xticks[length(xticks) - 1], 
+      y = ylim[2],
+      label = "Posterior", 
+      size = 6, 
+      hjust = 0
+      )
   
 }
 
@@ -742,10 +810,13 @@ set.seed(2)
 x <- rnorm(22, 0.30355)
 
 # Calculate Bayes factor
-BF = extractBF(ttestBF(x, rscale = "medium", nullInterval = c(0, Inf)))$bf[1]
+BF <- extractBF(ttestBF(x, 
+                        rscale = "medium", 
+                        nullInterval = c(0, Inf))
+                )$bf[1]
 
 # Plot
-BF10_plot = .plotPosterior.ttest.ggplot(x = x, BF = BF)
+BF10_plot <- .plotPosterior.ttest.ggplot(x = x, BF = BF)
 ggsave(filename = "figures/figure2a.tiff", device = "tiff", width = 6, height = 6, dpi = 300)
 
 ### SUPPORT FOR THE NULL 
@@ -755,100 +826,176 @@ set.seed(2)
 x <- rnorm(22, -0.1031)
 
 # Calculate Bayes factor
-BF = extractBF(ttestBF(x, rscale = "medium", nullInterval = c(0, Inf)))$bf[1]
+BF <- extractBF(ttestBF(x, 
+                        rscale = "medium", 
+                        nullInterval = c(0, Inf))
+                )$bf[1]
 
 # Plot
-BF01_plot = .plotPosterior.ttest.ggplot(x = x, BF = BF)
+BF01_plot <- .plotPosterior.ttest.ggplot(x = x, BF = BF)
 ggsave(filename = "figures/figure2b.tiff", device = "tiff", width = 6, height = 6, dpi = 300)
 
 #===================================================================#
 ########################## FIGURE 3A: INTRO ########################## 
 #===================================================================#
-n_fixed = 51
-n_s = 25
-alpha_total = 0.05
-alpha_strong = 0.025
-alpha_weak = 0.281784510170711 #See Simulations.R for function alpha_weak
-max_n_segments = 3
+n_fixed <- 51
+n_s <- 25
+alpha_total <- 0.05
+alpha_strong <- 0.025
+alpha_weak <- 0.281784510170711 #See simulations.R for function alpha_weak
+max_n_segments <- 3
 
-critical.d = function(proc, segment) {
-  alpha = ifelse(proc == "Fixed", alpha_total,
-                 ifelse(segment == max_n_segments, alpha_weak, alpha_strong))
-  n = ifelse(proc == "Fixed", n_fixed, n_s)
-  t = ifelse(proc == "Fixed", "Fixed Sample Hypothesis Test",
-             paste0("ISP ", ifelse(segment == 3, "(Last Segment)", "(First Two Segments)")))
-  df = 2*n-2
+critical.d <- function(proc, segment) {
+  alpha <- ifelse(
+    proc == "Fixed", alpha_total, 
+    ifelse(segment == max_n_segments, alpha_weak, alpha_strong))
+  n <- ifelse(proc == "Fixed", n_fixed, n_s)
+  t <- ifelse(
+    proc == "Fixed", "Fixed Sample Hypothesis Test",
+    paste0("ISP ", ifelse(segment == 3, "(Last Segment)", "(First Two Segments)")))
+  df <- 2*n-2
   
   p <- ggplot(data.frame(x = c(-4, 4)), aes(x)) +
-    stat_function(fun = dt, args = list(df = df)) +
-    stat_function(fun = dt, args = list(df = df), 
-                  xlim = c(qt(p = 1 - alpha, df = df), 4),
-                  geom = "area", fill = "red", alpha = 0.6) +
+    stat_function(
+      fun = dt, 
+      args = list(df = df)
+      ) +
+    stat_function(
+      fun = dt, 
+      args = list(df = df), 
+      xlim = c(qt(p = 1 - alpha, df = df), 4),
+      geom = "area", 
+      fill = "red", 
+      alpha = 0.6
+      ) +
     labs(title = t, y = "Density") +
     theme_classic() +
-    theme(plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
-          plot.subtitle = ggtext::element_markdown(size = 13, hjust = 0.5),
-          axis.title = element_blank(),
-          axis.text = element_blank(),
-          axis.ticks = element_blank()) +
+    theme(
+      plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
+      plot.subtitle = ggtext::element_markdown(size = 13, hjust = 0.5),
+      axis.title = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank()
+      ) +
     scale_x_continuous(limits = c(0, .8*sqrt(n/2))) +
-    geom_vline(xintercept = qt(1-alpha, df = df), linetype = 2, color = "grey") +
-    stat_function(fun = dt, args = list(df = df), 
-                  xlim = c(-1, qt(1 - ifelse(proc == "Fixed", alpha, alpha_weak), df = df)),
-                  geom = "area", fill = "grey", alpha = 0.3) +
-    annotate(geom = "text", x = 0.26, y = 0.29,   
-             label = "FAIL \n TO \n REJECT", fontface = "bold", size = 2.3)
+    geom_vline(
+      xintercept = qt(1-alpha, df = df), 
+      linetype = 2, 
+      color = "grey"
+      ) +
+    stat_function(
+      fun = dt, 
+      args = list(df = df), 
+      xlim = c(-1, qt(1 - ifelse(proc == "Fixed", alpha, alpha_weak), df = df)),
+      geom = "area", 
+      fill = "grey", 
+      alpha = 0.3
+      ) +
+    annotate(
+      geom = "text", 
+      x = 0.26, 
+      y = 0.29,   
+      label = "FAIL \n TO \n REJECT", 
+      fontface = "bold", 
+      size = 2.3
+      )
+  
   return(p)
 }
 
 # Create-plots
-p1 = critical.d(proc = "Fixed") + 
-  annotate(geom = "text", x = 3, y = 0.29, size = 2.3, 
-           label = paste0("REJECT \n p \u2264 \u03b1"), fontface = "bold") +
-  scale_x_continuous(limits = c(0, .8*sqrt(n_fixed/2)),
-                     breaks = qt(1-alpha_total, df = 2*n_fixed-2),
-                     labels = "\u03b1") +
+p1 <- critical.d(proc = "Fixed") + 
+  annotate(
+    geom = "text", 
+    x = 3, 
+    y = 0.29, 
+    size = 2.3, 
+    label = paste0("REJECT \n p \u2264 \u03b1"), 
+    fontface = "bold"
+    ) +
+  scale_x_continuous(
+    limits = c(0, .8*sqrt(n_fixed/2)),
+    breaks = qt(1-alpha_total, df = 2*n_fixed-2),
+    labels = "\u03b1"
+    ) +
   theme(axis.text.x = element_text(size = 12, face = "bold")) 
 
-p2 = critical.d(proc = "ISP", segment = 1) +
-  annotate(geom = "text", x = 2.5, y = 0.29, size = 2.3, 
-           label = paste0("REJECT \n p \u2264 \u03b1 strong"), fontface = "bold") +
-  geom_vline(xintercept = qt(1-alpha_weak, df = 2*n_s-2), linetype = 2, color = "grey") +
-  annotate(geom = "text", x = 1.45, y = 0.29,   size = 2.3,
-           label = paste0("CONTINUE \n \u03b1 strong < p \u2264 \u03b1 weak"),
-           fontface = "bold") +
-  scale_x_continuous(limits = c(0, .8*sqrt(n_s/2)),
-                     breaks = c(qt(1 - alpha_weak, df = 2*n_s-2), 
-                                qt(1 - alpha_strong, df = 2*n_s-2)),
-                     labels = c("\u03b1 weak", "\u03b1 strong" )) +
+p2 <- critical.d(proc = "ISP", segment = 1) +
+  annotate(
+    geom = "text", 
+    x = 2.5, 
+    y = 0.29, 
+    size = 2.3, 
+    label = paste0("REJECT \n p \u2264 \u03b1 strong"), 
+    fontface = "bold"
+    ) +
+  geom_vline(
+    xintercept = qt(1-alpha_weak, df = 2*n_s-2), 
+    linetype = 2, 
+    color = "grey"
+    ) +
+  annotate(
+    geom = "text", 
+    x = 1.45, 
+    y = 0.29,   
+    size = 2.3,
+    label = paste0("CONTINUE \n \u03b1 strong < p \u2264 \u03b1 weak"),
+    fontface = "bold"
+    ) +
+  scale_x_continuous(
+    limits = c(0, .8*sqrt(n_s/2)),
+    breaks = c(qt(1 - alpha_weak, df = 2*n_s-2), 
+               qt(1 - alpha_strong, df = 2*n_s-2)),
+    labels = c("\u03b1 weak", "\u03b1 strong" )
+    ) +
   theme(axis.text.x = element_text(size = 12, face = "bold"))
 
-p3 = critical.d(proc = "ISP", segment = 3) +
-  annotate(geom = "text", x = 2.5,y = 0.29, size = 2.3, 
-           label = paste0("REJECT \n p \u2264 \u03b1 weak"), fontface = "bold") +
-  scale_x_continuous(limits = c(0, .8*sqrt(n_s/2)),
-                     breaks = qt(1 - alpha_weak, df = 2*n_s-2),
-                     labels = "\u03b1 weak") +
+p3 <- critical.d(proc = "ISP", segment = 3) +
+  annotate(
+    geom = "text", 
+    x = 2.5,
+    y = 0.29, 
+    size = 2.3, 
+    label = paste0("REJECT \n p \u2264 \u03b1 weak"), 
+    fontface = "bold"
+    ) +
+  scale_x_continuous(
+    limits = c(0, .8*sqrt(n_s/2)),
+    breaks = qt(1 - alpha_weak, df = 2*n_s-2),
+    labels = "\u03b1 weak"
+    ) +
   theme(axis.text.x = element_text(size = 12, face = "bold"))
 
 tiff(file="figures/figure3a.tiff",width=2800,height=700, units = "px", res = 300)
-grid.arrange(p1, p2, p3, nrow = 1, bottom = "Cohen's d", 
-             left = textGrob("Density under H0: \u03b4 = 0", rot = 90, hjust = 0.4,
-                             gp = gpar(fontsize = 10)))
+grid.arrange(
+  p1, 
+  p2, 
+  p3, 
+  nrow = 1, 
+  bottom = "Cohen's d", 
+  left = textGrob(
+    "Density under H0: \u03b4 = 0", 
+    rot = 90, 
+    hjust = 0.4,
+    gp = gpar(fontsize = 10)
+    )
+  )
 dev.off()
 
 #=================================================================================#
 ########################## FIGURE 3B: FIXED + ISP EXAMPLE ########################## 
 #=================================================================================#
 
-critical.d = function(proc, segment) {
-  alpha = ifelse(proc == "Fixed", alpha_total,
-                 ifelse(segment == max_n_segments, alpha_weak, alpha_strong))
-  n = ifelse(proc == "Fixed", n_fixed, n_s)
-  t = ifelse(proc == "Fixed", "Fixed Sample Hypothesis Test",
-             paste0("ISP ", ifelse(segment == 3, "(Last Segment)", "(First Two Segments)")))
-  df = 2*n-2
-  critical_d = round(qt(1-alpha, df = 2*n-2) * sqrt(2*(1/n)),2)
+critical.d <- function(proc, segment) {
+  alpha <- ifelse(
+    proc == "Fixed", alpha_total,
+    ifelse(segment == max_n_segments, alpha_weak, alpha_strong))
+  n <- ifelse(proc == "Fixed", n_fixed, n_s)
+  t <- ifelse(
+    proc == "Fixed", "Fixed Sample Hypothesis Test",
+    paste0("ISP ", ifelse(segment == 3, "(Last Segment)", "(First Two Segments)")))
+  df <- 2*n-2
+  critical_d <- round(qt(1-alpha, df = 2*n-2) * sqrt(2*(1/n)),2)
   
   p <- ggplot(data.frame(x = c(-4, 4)), aes(x)) +
     stat_function(
@@ -924,162 +1071,258 @@ critical.d = function(proc, segment) {
   return(p)
 }
 
-p1 = critical.d(proc = "Fixed") +
-  annotate(geom = "text", 
-           x = 3.8, 
-           y = 0.07,   
-           label = paste0("N = ", n_fixed), 
-           fontface = "italic", 
-           size = 2.3)
+p1 <- critical.d(proc = "Fixed") +
+  annotate(
+    geom = "text", 
+    x = 3.8, 
+    y = 0.07,   
+    label = paste0("N = ", n_fixed), 
+    fontface = "italic", 
+    size = 2.3
+    )
 
-p2 = critical.d(proc = "ISP", segment = 1) +
+p2 <- critical.d(proc = "ISP", segment = 1) +
   geom_vline(
     xintercept = qt(1-alpha_weak, df = 2*n_s-2), 
     linetype = 2, 
-    color = "grey") +
-  annotate(geom = "text", 
-           x = 1.5, 
-           y = 0.27,   
-           size = 2.3,
-           label = paste0(
-             "CONTINUE \n ", 
-             round(qt(1-alpha_weak, df = 2*n_s-2) / sqrt(n_s/2),2),
-             " < d < ", 
-             round(qt(1 - alpha_strong, df = 2*n_s-2) / sqrt(n_s/2), 2), "\n",
-             alpha_strong, 
-             " < p < ", 
-             round(alpha_weak, 2)
-             ),
-           fontface = "bold") +
-  annotate(geom = "text", 
-           x = 2.65, 
-           y = 0.07,   
-           label = paste0("N = ", n_s), 
-           fontface = "italic", 
-           size = 2.3) + 
+    color = "grey"
+    ) +
+  annotate(
+    geom = "text", 
+    x = 1.5, 
+    y = 0.27, 
+    size = 2.3,
+    label = paste0(
+      "CONTINUE \n ", 
+      round(qt(1-alpha_weak, df = 2*n_s-2) / sqrt(n_s/2),2),
+      " < d < ", 
+      round(qt(1 - alpha_strong, df = 2*n_s-2) / sqrt(n_s/2), 2), 
+      "\n",
+      alpha_strong, 
+      " < p < ", 
+      round(alpha_weak, 2)
+      ),
+    fontface = "bold"
+    ) +
+  annotate(
+    geom = "text", 
+    x = 2.65, 
+    y = 0.07, 
+    label = paste0("N = ", n_s), 
+    fontface = "italic",
+    size = 2.3
+    ) + 
   scale_x_continuous(
     limits = c(0, .8*sqrt(n_s/2)),
-    breaks = c(qt(1-alpha_weak, df = 2*n_s-2), qt(1 - alpha_strong, df = 2*n_s-2)),
-    labels = paste0("*d* = ", c(round(qt(1-alpha_weak, df = 2*n_s-2) * sqrt(2*(1/n_s)),2), 
-                                round(qt(1-alpha_strong, df = 2*n_s-2) * sqrt(2*(1/n_s)),2))),
+    breaks = c(qt(1-alpha_weak, df = 2*n_s-2), 
+               qt(1 - alpha_strong, df = 2*n_s-2)),
+    labels = paste0(
+      "*d* = ", 
+      c(round(qt(1-alpha_weak, df = 2*n_s-2) * sqrt(2*(1/n_s)),2), 
+        round(qt(1-alpha_strong, df = 2*n_s-2) * sqrt(2*(1/n_s)),2))
+      ),
     sec.axis = dup_axis(
-      labels = paste0("*p* = ", c(round(alpha_weak, 2), round(alpha_strong, 3)))
-    )
-  ) 
+      labels = paste0(
+        "*p* = ", 
+        c(round(alpha_weak, 2), 
+          round(alpha_strong, 3)))
+      )
+    ) 
 
-p3 = critical.d(proc = "ISP", segment = 3) +
-  annotate(geom = "text", 
-           x = 2.65, 
-           y = 0.07,   
-           label = paste0("N = ", n_s), 
-           fontface = "italic", 
-           size = 2.3)
+p3 <- critical.d(proc = "ISP", segment = 3) +
+  annotate(
+    geom = "text", 
+    x = 2.65, 
+    y = 0.07, 
+    label = paste0("N = ", n_s), 
+    fontface = "italic", 
+    size = 2.3
+    )
 
 tiff(file="figures/figure3b.tiff",width=2500,height=800, units = "px", res = 300)
-grid.arrange(p1, p2, p3, nrow = 1, 
-             left = textGrob("Density under H0: \u03b4 = 0", rot = 90, hjust = 0.57,
-                             gp = gpar(fontsize = 10)))
+grid.arrange(
+  p1, 
+  p2, 
+  p3, 
+  nrow = 1, 
+  left = textGrob(
+    "Density under H0: \u03b4 = 0", 
+    rot = 90, 
+    hjust = 0.57,
+    gp = gpar(fontsize = 10)
+    )
+  )
 dev.off()
 #=========================================================================#
 ########################## FIGURE 4: ERROR RATES ########################## 
 #=========================================================================#
 
-ER = df %>% 
+ER <- df %>% 
   filter(d_actual != -0.2) %>% 
   mutate(
     correct_inference = ifelse(
       d_actual > 0 & decision == "reject.null", 1,
       ifelse(d_actual == 0 & decision == "reject.alt", 1, 
-             0)),
+             0)
+      ),
     incorrect_inference = ifelse(
       d_actual == 0 & decision == "reject.null", 1,
       ifelse(d_actual > 0 & decision == "reject.alt", 1,
-             0)),
-    inconclusive = ifelse(decision == "inconclusive", 1, 0))
+             0)
+      ),
+    inconclusive = ifelse(decision == "inconclusive", 1, 0)
+    )
 
-ER_summary = ER %>% 
+ER_summary <- ER %>% 
   group_by(proc, facet, d_actual) %>% 
   summarize(
     correct_rate = mean(correct_inference),
     incorrect_rate = mean(incorrect_inference),
-    inconclusive_rate = mean(inconclusive))
+    inconclusive_rate = mean(inconclusive)
+    )
 
-tiff(file="figures/figure4.tiff",width=2350,height=1500, units = "px", res = 300)
-ggplot(data = ER_summary %>% filter(d_actual > 0), mapping = aes(x = d_actual, y = correct_rate)) +
-  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
-  geom_line(color = "green", alpha = 0.7) +
-  geom_point(shape = "v", size = 3, color = "green") +
-  geom_line(mapping = aes(y = incorrect_rate), color = "red", alpha = 0.7) +
-  geom_line(mapping = aes(y = inconclusive_rate), color = "grey", linetype = "dashed", alpha = 0.7) +
-  geom_point(data = ER_summary %>% filter(d_actual < 0.8),
-             mapping = aes(y = inconclusive_rate), 
-             shape = "?", 
-             size = 3, 
-             color = "grey") +
-  geom_point(mapping = aes(y = incorrect_rate), 
-             shape = "x", 
-             size = 3, 
-             color = "red") +
+tiff(file="figures/figure4.tiff", width = 2350, height = 1500, units = "px", res = 300)
+ggplot(
+  data = ER_summary %>% filter(d_actual > 0), 
+  mapping = aes(x = d_actual, 
+                y = correct_rate)
+  ) +
+  facet_wrap(
+    vars(facet), 
+    labeller = labeller(facet = facet.label)
+    ) +
+  geom_line(
+    color = "green", 
+    alpha = 0.7
+    ) +
+  geom_point(
+    shape = "v", 
+    size = 3, 
+    color = "green"
+    ) +
+  geom_line(
+    mapping = aes(y = incorrect_rate), 
+    color = "red", 
+    alpha = 0.7
+    ) +
+  geom_line(
+    mapping = aes(y = inconclusive_rate), 
+    color = "grey", 
+    linetype = "dashed", 
+    alpha = 0.7
+    ) +
+  geom_point(
+    data = ER_summary %>% filter(d_actual < 0.8),
+    mapping = aes(y = inconclusive_rate), 
+    shape = "?", 
+    size = 3, 
+    color = "grey"
+    ) +
+  geom_point(
+    mapping = aes(y = incorrect_rate), 
+    shape = "x", 
+    size = 3,
+    color = "red"
+    ) +
   theme_bw() +
   scale_x_continuous(limits = c(0.2, 1)) +
   scale_y_continuous(labels = c("0%", "25%", "50%", "75%", "100%")) +
-  theme(strip.background =element_rect(fill="white")) +
-  labs(x = "True Effect Size (Cohen's d)", 
-       y = "True Positives, False Negatives, Inconclusive Evidence")
+  theme(strip.background = element_rect(fill = "white")) +
+  labs(
+    x = "True Effect Size (Cohen's d)", 
+    y = "True Positives, False Negatives, Inconclusive Evidence"
+    )
 dev.off()
 
 # Error Rates Table 2a [see code in manuscript.Rmd] 
-t1 = df %>% filter(d_forpower == d_actual) %>%
+t1 <- df %>% 
+  filter(d_forpower == d_actual) %>%
   group_by(proc) %>% 
-  summarize(true_positive = mean(decision == "reject.null"),
-            inconclusive = mean(decision == "inconclusive"),
-            false_negative = mean(decision == "reject.alt"))
+  summarize(
+    true_positive = mean(decision == "reject.null"),
+    inconclusive = mean(decision == "inconclusive"),
+    false_negative = mean(decision == "reject.alt")
+    )
 
 # Error Rates Table 2b [see code in manuscript.Rmd]
-t2 = df %>% filter(d_actual == 0) %>% 
+t2 <- df %>% 
+  filter(d_actual == 0) %>% 
   group_by(proc) %>% 
-  summarize(true_negative = mean(decision == "reject.alt"),
-            inconclusive = mean(decision == "inconclusive"),
-            false_positive = mean(decision == "reject.null"))
+  summarize(
+    true_negative = mean(decision == "reject.alt"),
+    inconclusive = mean(decision == "inconclusive"),
+    false_positive = mean(decision == "reject.null")
+    )
 
 #========================================================================#
 ########################## FIGURE 5: Efficiency ########################## 
 #========================================================================#
 
-E_n = df %>% group_by(proc, d_actual) %>% 
-  #mutate(proc = fct_relevel(proc, "Fixed", after = 0)) %>% 
-  summarize(E_n = mean(n_cumulative)) # %>% 
-#mutate(proc = case_when(proc == "Fixed" ~ "Fixed",
-#                        proc == "asP" ~ "Pocock",
-#                        proc == "asOF" ~ "O'Brien-Fleming",
-#                        proc == "Bayes" ~ "Bayes",
-#                        proc == "ISP" ~ "ISP")) %>% 
-#rename(Procedure = proc)
+E_n <- df %>% group_by(proc, d_actual) %>% 
+  summarize(E_n = mean(n_cumulative)) 
 
-tiff(file="figures/figure5.tiff",width=1800,height=1500, units = "px", res = 300)
-ggplot(data = E_n, mapping = aes(x = d_actual, y = E_n, group = proc, linetype = proc, color = proc)) +
+tiff(file = "figures/figure5.tiff", width = 1800, height = 1500, units = "px", res = 300)
+ggplot(
+  data = E_n, 
+  mapping = aes(
+    x = d_actual, 
+    y = E_n, 
+    group = proc, 
+    linetype = proc, 
+    color = proc)
+  ) +
   geom_line(size = 1.2) +
-  annotate(geom = "text", x = 0.3, y = 47.7, label = "Bayes", color = "red") +
-  #annotate(geom = "segment", x = 0.54, y = 48, xend = 0.66, yend = 48, linetype = "longdash", color = "red", size = 1) +
-  annotate(geom = "text", x = 0.85, y = 50, label = "Fixed") +
-  annotate(geom = "text", x = 0.87, y = 35, label = "O'Brien \n Fleming", color = "green") +
-  annotate(geom = "text", x = 0.23, y = 43.2, label = "ISP", color = "blue") +
-  annotate(geom = "text", x = 0.75, y = 28, label = "Pocock", color = "grey") +
-  #annotate(geom = "text", x = -0.1, y = 47, label = "mSPRT", color = "purple") + 
+  annotate(
+    geom = "text", 
+    x = 0.3, 
+    y = 47.7, 
+    label = "Bayes", 
+    color = "red"
+    ) +
+  annotate(
+    geom = "text", 
+    x = 0.85, 
+    y = 50, 
+    label = "Fixed"
+    ) +
+  annotate(
+    geom = "text", 
+    x = 0.87, 
+    y = 35, 
+    label = "O'Brien \n Fleming", 
+    color = "green"
+    ) +
+  annotate(
+    geom = "text", 
+    x = 0.23, 
+    y = 43.2, 
+    label = "ISP", 
+    color = "blue"
+    ) +
+  annotate(
+    geom = "text", 
+    x = 0.75, 
+    y = 28, 
+    label = "Pocock", 
+    color = "grey"
+    ) +
   theme_bw() +
-  scale_linetype_manual(values=c("solid", "twodash", "solid", "longdash", "dotted")) +
-  scale_color_manual(values=c("black", "green", "grey",  "red", "blue"))+
-  labs(x = "True Effect Size (Cohen's d)", y = "Average Sample Size") +
-  scale_x_continuous(breaks = seq(-0.2, 1, 0.2),
-                     limits = c(-0.2, 1)) +
+  scale_linetype_manual(
+    values = c("solid", "twodash", "solid", "longdash", "dotted")
+    ) +
+  scale_color_manual(
+    values = c("black", "green", "grey",  "red", "blue")
+    )+
+  labs(
+    x = "True Effect Size (Cohen's d)", 
+    y = "Average Sample Size"
+    ) +
+  scale_x_continuous(
+    breaks = seq(-0.2, 1, 0.2),
+    limits = c(-0.2, 1)
+    ) +
   theme(legend.position = "none")
 dev.off()
-
-# t3 = E_n %>% mutate(E_n = E_n %>% round()) %>% 
-#   pivot_wider(names_from = d_actual, names_prefix = "d = ", values_from = E_n) 
-# 
-# knitr::kable(t3)
-
 
 #=================================================================================#
 #=================================================================================#
@@ -1089,29 +1332,29 @@ dev.off()
 # Density of Obtained Effect Size Estimates
 # Excepted effect size ---> d = 0.5
 # True effect size == Hypothesized effect size (i.e., effect size powered for)
-# Add legend for corrected ES estimate 
 
-median_ES = df %>% 
+median_ES <- df %>% 
   filter(d_actual == d_forpower) %>% 
   group_by(facet) %>% 
   summarize(ES_corrected = median(ES_corrected)) %>% 
-  pull(ES_corrected) %>% round(2)
+  pull(ES_corrected) %>% 
+  round(2)
 
-
-median_ES_uncorrected = df %>% 
+median_ES_uncorrected <- df %>% 
   filter(d_actual == d_forpower) %>% 
   group_by(facet) %>% 
   summarize(ES = median(ES)) %>% 
-  pull(ES) %>% round(2)
+  pull(ES) %>% 
+  round(2)
 
-text_uncorrected = data.frame(
+text_uncorrected <- data.frame(
   facet = 1:5,
   label = paste0("Median ES = ", median_ES_uncorrected),
   x = -0.5, 
   y = 2.35
   )
 
-text_corrected = data.frame(
+text_corrected <- data.frame(
   facet = 1:5,
   label = paste0("Corrected ES = ", median_ES),
   x = -0.5, 
@@ -1119,46 +1362,82 @@ text_corrected = data.frame(
   ) %>% 
   filter(facet %in% c(2, 4, 5))
 
-legend = data.frame(
+legend <- data.frame(
   facet = rep(1),
   label = c("Uncorrected", "Corrected"),
   y = c(2.35, 2.1),
   x = rep(1)
 )
 
-density = function(dat) {
+density <- function(dat) {
   ggplot(data = dat, mapping = aes(x = ES)) +
     geom_density() +
-    geom_density(mapping = aes(x = ES_corrected), linetype = "dashed") + 
-    facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
+    geom_density(
+      mapping = aes(x = ES_corrected), 
+      linetype = "dashed"
+      ) + 
+    facet_wrap(
+      vars(facet), 
+      labeller = labeller(facet = facet.label)
+      ) +
     theme_bw() +
-    labs(x = "Empirical Effect Size Estimate", y = "Density") +
+    labs(
+      x = "Empirical Effect Size Estimate", 
+      y = "Density"
+      ) +
     scale_x_continuous(limits = c(-0.5, 1.5)) +
-    #scale_y_continuous(limits=c(0,3)) +
-    theme(legend.position = "none", strip.background = element_rect(fill = "white")) +
-    geom_text(data = text_corrected, 
-              aes(x = x, y = y, label = label, hjust = 0), 
-              size = 2.7) +
-    geom_text(data = text_uncorrected, 
-              aes(x = x, y = y, label = label, hjust = 0), 
-              size = 2.7) +
-    geom_text(data = legend,
-              aes(x = x, y = y, label = label, hjust = 0),
-              size = 2.7) +
-    geom_line(data = data.frame(x = c(0.7, .95),
-                                y = rep(2.35),
-                                facet = 1),
-              mapping = aes(x = x, y = y)) +
-    geom_line(data = data.frame(x = c(0.7, .95),
-                                y = rep(2.1),
-                                facet = 1),
-              mapping = aes(x = x, y = y),
-              linetype = "dashed")
+    theme(
+      legend.position = "none", 
+      strip.background = element_rect(fill = "white")
+      ) +
+    geom_text(
+      data = text_corrected, 
+      aes(x = x, 
+          y = y, 
+          label = label, 
+          hjust = 0
+          ), 
+      size = 2.7
+      ) +
+    geom_text(
+      data = text_uncorrected, 
+      aes(x = x, 
+          y = y, 
+          label = label, 
+          hjust = 0
+          ), 
+      size = 2.7
+      ) +
+    geom_text(
+      data = legend,
+      aes(x = x, 
+          y = y, 
+          label = label, 
+          hjust = 0
+          ),
+      size = 2.7
+      ) +
+    geom_line(
+      data = data.frame(
+        x = c(0.7, .95),
+        y = rep(2.35),
+        facet = 1
+        ),
+      mapping = aes(x = x, y = y)
+      ) +
+    geom_line(
+      data = data.frame(
+        x = c(0.7, .95),
+        y = rep(2.1),
+        facet = 1
+        ),
+      mapping = aes(x = x, y = y),
+      linetype = "dashed"
+      )
               
 }
 
-
-tiff(file="figures/figure6.tiff",width=2350,height=1200, units = "px", res = 300)
+tiff(file = "figures/figure6.tiff",width = 2350,height = 1200, units = "px", res = 300)
 density(df %>% filter(d_forpower == d_actual))
 dev.off()
 
@@ -1177,7 +1456,7 @@ df_long <- df %>%
 df_summary <- df_long %>% 
   group_by(proc, facet, d_actual, ES_type) %>% 
   summarize(
-    mse = mean((ES - d_actual) ^2),
+    mse = mean((ES - d_actual)^2),
     var = mean((ES - mean(ES))^2),
     median.ES = median(ES),
     ES = mean(ES)
@@ -1188,7 +1467,7 @@ df_summary <- df_long %>%
     bias.sq = (ES - d_actual)^2,
     median.bias.sq = (median.ES - d_actual)^2
   ) %>% 
-  filter(!((ES_type == "ES_corrected") & (proc == "Fixed" | proc == "ISP"))) #%>% 
+  filter(!((ES_type == "ES_corrected") & (proc == "Fixed" | proc == "ISP")))  
 
 # Median bias
 
@@ -1198,11 +1477,16 @@ legend <- data.frame(
   y = c(0.11, 0.06),
   x = rep(0.1),
   ES_type = c("ES", "ES_corrected")
-)
+  )
 
-tiff(file="figures/figure7.tiff",width=2300,height=1200, units = "px", res = 300)
-ggplot(data = df_summary, 
-       mapping = aes(x = d_actual, y = median.bias, color = ES_type)) +
+tiff(file = "figures/figure7.tiff", width = 2300, height = 1200, units = "px", res = 300)
+ggplot(
+  data = df_summary, 
+  mapping = aes(
+    x = d_actual, 
+    y = median.bias, 
+    color = ES_type)
+  ) +
   theme_bw() +
   theme(strip.background = element_rect(fill = "white")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray") + 
@@ -1217,17 +1501,29 @@ ggplot(data = df_summary,
     linetype = "dashed"
   ) + 
   geom_point() +
-  facet_wrap(vars(facet), labeller = labeller(facet = facet.label)) +
+  facet_wrap(
+    vars(facet), 
+    labeller = labeller(facet = facet.label)
+    ) +
   theme(legend.position = "none") +
   scale_x_continuous(
     breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
     limits = c(-0.2, 1)
   ) +
-  labs(x = "True Effect Size (Cohen's d)", 
-       y = "Median Estimated Effect Size - True Effect Size") +
+  labs(
+    x = "True Effect Size (Cohen's d)", 
+    y = "Median Estimated Effect Size - True Effect Size"
+    ) +
   scale_color_manual(values = c("red", "blue")) +
-  geom_text(data = legend, 
-            aes(x = x, y = y, label = label, hjust = 0)) + 
+  geom_text(
+    data = legend, 
+    aes(
+      x = x, 
+      y = y, 
+      label = label, 
+      hjust = 0
+      )
+    ) + 
   geom_line(
     data = data.frame(
       x = c(-0.2, 0.05),
@@ -1267,17 +1563,19 @@ df_summary <- df_summary %>%
     )
   ))
 
-proc_ES.label <- c("Fixed Hypothesis and \n Equivalence Test", 
-                 "Sequential Bayes Factor \n Naive effect size estimate", 
-                 "Pocock-like GS design  \n Naive effect size estimate",
-                 "O'Brien-Fleming-like GS design  \n Naive effect size estimate",
-                 "Independent Segments \n Procedure", 
-                 "Sequential Bayes Factor \n Bias-adjusted estimator",
-                 "Pocock-like GS design \n Bias-adjusted estimator",
-                 "O'Brien-Fleming-like GS design \n Bias-adjusted estimator")
+proc_ES.label <- c(
+  "Fixed Hypothesis and \n Equivalence Test", 
+  "Sequential Bayes Factor \n Naive effect size estimate", 
+  "Pocock-like GS design  \n Naive effect size estimate",
+  "O'Brien-Fleming-like GS design  \n Naive effect size estimate",
+  "Independent Segments \n Procedure", 
+  "Sequential Bayes Factor \n Bias-adjusted estimator",
+  "Pocock-like GS design \n Bias-adjusted estimator",
+  "O'Brien-Fleming-like GS design \n Bias-adjusted estimator"
+  )
 names(proc_ES.label) <- levels(df_summary$proc_ES)
 
-facet1 = data.frame(
+facet1 <- data.frame(
   proc_ES = factor("FixedES"),
   label1 = "Mean Squared Error",
   label2 = "Variance",
@@ -1289,50 +1587,109 @@ facet1 = data.frame(
   y3 = .09
   )
 
-tiff(file="figures/figure8.tiff",width=2400,height=1300, units = "px", res = 300)
-ggplot(data = df_summary, mapping = aes(x = d_actual, y = bias.sq)) +
+tiff(file = "figures/figure8.tiff", width = 2400,height = 1300, units = "px", res = 300)
+ggplot(
+  data = df_summary, 
+  mapping = aes(x = d_actual, y = bias.sq)
+  ) +
   facet_wrap(
     ~ proc_ES, 
     labeller = labeller(proc_ES = proc_ES.label), 
     ncol = 4
     ) +
   theme_bw() +
-  geom_smooth(color = "black", se = F, size = .6) +
-  geom_smooth(mapping= aes(y = mse), se = F, size = .6,
-              color = "red", linetype = "dashed") + #MSE
-  geom_smooth(mapping = aes(y = var), se = F, size = .6, linetype = "dotted") + #Variance
+  geom_smooth(
+    color = "black", 
+    se = F, 
+    size = .6
+    ) +
+  geom_smooth(
+    mapping= aes(y = mse), 
+    se = F, 
+    size = .6,
+    color = "red", 
+    linetype = "dashed"
+    ) + #MSE
+  geom_smooth(
+    mapping = aes(y = var), 
+    se = F, 
+    size = .6, 
+    linetype = "dotted"
+    ) + #Variance
   theme_bw() +
-  theme(strip.background =element_rect(fill="white")) +
-  labs(x = "True Effect Size (Cohen's d)", y = "Bias-Variance") +
-  scale_x_continuous(breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
-                     limits = c(-0.2, 1)) +
-  geom_segment(data = facet1,
-               aes(x = x1, xend = x2, y = y1, yend = y1),
-               linetype = "dashed",
-               color = "red") +
-  geom_segment(data = facet1,
-               aes(x = x1, xend = x2, y = y2, yend = y2),
-               linetype = "dotted",
-               color = "blue") +
-  geom_segment(data = facet1, aes(x = x1, xend = x2, y = y3, yend = y3)) +
-  geom_text(data = facet1,
-            aes(x = x2, y = y1, label = label1, hjust = 0),
-            size = 2.7,
-            color = "red") +
-  geom_text(data = facet1,
-            aes(x = x2, y = y2, label = label2, hjust = 0),
-            size = 2.7,
-            color = "blue") +
-  geom_text(data = facet1,
-            aes(x = x2, y = y3, label = label3, hjust = 0),
-            size = 2.7)
+  theme(strip.background = element_rect(fill="white")) +
+  labs(
+    x = "True Effect Size (Cohen's d)", 
+    y = "Bias-Variance"
+    ) +
+  scale_x_continuous(
+    breaks = c(-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
+    limits = c(-0.2, 1)
+    ) +
+  geom_segment(
+    data = facet1,
+    aes(x = x1, xend = x2, y = y1, yend = y1),
+    linetype = "dashed",
+    color = "red"
+    ) +
+  geom_segment(
+    data = facet1,
+    aes(
+      x = x1, 
+      xend = x2, 
+      y = y2, 
+      yend = y2
+      ),
+    linetype = "dotted",
+    color = "blue"
+    ) +
+  geom_segment(
+    data = facet1, 
+    aes(
+      x = x1, 
+      xend = x2, 
+      y = y3, 
+      yend = y3)
+    ) +
+  geom_text(
+    data = facet1,
+    aes(
+      x = x2, 
+      y = y1, 
+      label = label1, 
+      hjust = 0
+      ),
+    size = 2.7,
+    color = "red"
+    ) +
+  geom_text(
+    data = facet1,
+    aes(
+      x = x2, 
+      y = y2, 
+      label = label2,
+      hjust = 0
+      ),
+    size = 2.7,
+    color = "blue"
+    ) +
+  geom_text(
+    data = facet1,
+    aes(
+      x = x2, 
+      y = y3, 
+      label = label3, 
+      hjust = 0
+      ),
+    size = 2.7
+    )
 dev.off()
 
 #===============================================================================#
 ################ FIGURE 9: MSE CONDITIONAL ON STOPPING TIME #################### 
 #==============================================================================#
 
-sub = df %>% 
+sub <- df %>% 
   filter(proc != "Fixed" & d_forpower == d_actual) %>% 
   group_by(proc, facet, segment, d_actual) %>% 
   summarize(mse = mean((ES_corrected - d_actual)^2)) %>% 
@@ -1343,28 +1700,45 @@ sub = df %>%
       filter(proc != "Fixed" & d_forpower == d_actual) %>%
       group_by(proc, facet) %>% 
       summarize(mse = mean((ES_corrected - d_actual)^2)) %>% 
-      mutate(segment = rep(4))) #%>% 
-#mutate(proc = fct_relevel(proc, "Bayes", "asP", "ISP"))
+      mutate(segment = rep(4))
+    ) 
 
-facet.label = c("Fixed Hypothesis \n and Equivalence Test", 
-                "Sequential Bayes Factor", 
-                "Independent Segments \n Procedure", 
-                "Pocock-like GS design",
-                "O'Brien-Fleming-like GS design")
-names(facet.label) = c(1, 2, 3, 4, 5)
+facet.label <- c("Fixed Hypothesis \n and Equivalence Test", 
+                 "Sequential Bayes Factor", 
+                 "Independent Segments \n Procedure", 
+                 "Pocock-like GS design",
+                 "O'Brien-Fleming-like GS design")
+names(facet.label) <- c(1, 2, 3, 4, 5)
 
-tiff(file="figures/figure9.tiff",width=2000,height=1500, units = "px", res = 300)
-ggplot(data = sub, mapping = aes(x = as.factor(segment), y = mse)) +
-  facet_wrap(vars(facet), labeller = labeller(facet = facet.label), nrow = 2) +
+tiff(file = "figures/figure9.tiff", width = 2000, height = 1500, units = "px", res = 300)
+ggplot(
+  data = sub, 
+  mapping = aes(x = as.factor(segment), y = mse)
+  ) +
+  facet_wrap(
+    vars(facet), 
+    labeller = labeller(facet = facet.label), 
+    nrow = 2
+    ) +
   geom_segment(
-    aes(x = segment, xend = segment, y = 0, yend = mse),
+    aes(
+      x = segment, 
+      xend = segment, 
+      y = 0, 
+      yend = mse
+      ),
     color = "red",
     linetype = "dashed"
     ) +
   geom_point() +
   theme_bw() +
-  theme(strip.background =element_rect(fill="white")) +
-  labs(x = "Segment", y = "Mean Squared Error") +
-  scale_x_discrete(breaks = c(1, 2, 3, 4),
-                   labels = c(1, 2, 3, "Overall"))
+  theme(strip.background = element_rect(fill="white")) +
+  labs(
+    x = "Segment", 
+    y = "Mean Squared Error"
+    ) +
+  scale_x_discrete(
+    breaks = c(1, 2, 3, 4),
+    labels = c(1, 2, 3, "Overall")
+    )
 dev.off()
